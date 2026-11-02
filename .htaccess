@@ -1,0 +1,24 @@
+Options -Indexes
+
+# Block direct access to sensitive files and dirs
+<FilesMatch "\.(env|sqlite|json|lock)$">
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "^(config|db|auth_lib)\.php$">
+    Deny from all
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /Mail/
+
+    # Allow direct access to public/ assets
+    RewriteCond %{REQUEST_URI} /public/ [NC]
+    RewriteRule ^ - [L]
+
+    # Route everything else through public/index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/index.php [QSA,L]
+</IfModule>

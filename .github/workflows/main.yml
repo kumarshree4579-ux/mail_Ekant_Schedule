@@ -1,0 +1,61 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  web-deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+    
+    - name: Check PHP syntax
+      run: find . -name "*.php" -print0 | xargs -0 -n1 php -l
+
+    # Uncomment the following step if you add composer.json to your repository
+    # - name: Install Dependencies
+    #   run: composer install --no-dev --optimize-autoloader
+
+    - name: Sync files to Hostinger 1
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: /Mail/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          .github/**
+          app/.env
+          .env
+          storage/**
+          data/**
+          *.sqlite
+
+    - name: Sync files to Hostinger 2
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER_2 }}
+        username: ${{ secrets.FTP_USERNAME_2 }}
+        password: ${{ secrets.FTP_PASSWORD_2 }}
+        server-dir: /Mail/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          .github/**
+          app/.env
+          .env
+          storage/**
+          data/**
+          *.sqlite
