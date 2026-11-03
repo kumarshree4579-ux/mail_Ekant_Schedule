@@ -1333,7 +1333,6 @@ document.addEventListener('keydown', (e) => {
                     'State': 'State',
                     'Zip': 'Zip',
                     'Rooms': '# of Rooms',
-                    'Extra': 'Total TVs',
                     'Email': 'Contact Email',
                     'Hotel_Number': 'Hotel Phone',
                     'Contact_Person': 'Contact Person',

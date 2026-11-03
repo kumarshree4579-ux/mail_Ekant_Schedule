@@ -42,20 +42,3 @@ jobs:
           storage/**
           data/**
           *.sqlite
-
-    - name: Sync files to Hostinger 2
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER_2 }}
-        username: ${{ secrets.FTP_USERNAME_2 }}
-        password: ${{ secrets.FTP_PASSWORD_2 }}
-        server-dir: /Mail/
-        exclude: |
-          **/.git*
-          **/.git*/**
-          .github/**
-          app/.env
-          .env
-          storage/**
-          data/**
-          *.sqlite

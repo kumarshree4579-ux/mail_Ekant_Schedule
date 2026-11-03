@@ -13,7 +13,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 final class StudioController
 {
     private const MAX_BODY_BYTES   = 2_097_152;
-    private const MAX_ATTACH_BYTES  = 5_242_880;
+    private const MAX_ATTACH_BYTES  = 26_214_400; // 25 MB
     private const SEND_RATE_LIMIT   = 450;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -69,6 +69,115 @@ final class StudioController
         $value = preg_replace('/[<>:"|?*\x00-\x1F]/', '', $value) ?? '';
         $value = preg_replace('/\s+/', ' ', $value);
         return $value;
+    }
+
+    private static function humanizeFieldName(string $fieldKey): string
+    {
+        $labelMap = [
+            'Hotel_Name' => 'Hotel Name',
+            'Address' => 'Address',
+            'City' => 'City',
+            'State' => 'State',
+            'Zip' => 'Zip',
+            'Rooms' => '# of Rooms',
+            'Hotel_Number' => 'Hotel Phone',
+            'Contact_Person' => 'Contact Person',
+            'First_Name' => 'First Name',
+            'Email' => 'Contact Email',
+            'Service_Provider' => 'Service Provider',
+            'offeredProgramming' => 'Programming',
+            'System' => 'System',
+            'Bill' => 'Monthly Bill ($)',
+            'Upfront' => 'Upfront Cost ($)',
+        ];
+
+        if (isset($labelMap[$fieldKey])) {
+            return $labelMap[$fieldKey];
+        }
+
+        $label = preg_replace('/[_-]+/', ' ', $fieldKey) ?? $fieldKey;
+        $label = trim($label);
+        return $label === '' ? $fieldKey : ucwords($label);
+    }
+
+    private static function normalizeFieldType(string $type): string
+    {
+        $type = strtolower(trim($type));
+        $map = [
+            'mail' => 'email',
+            'email_address' => 'email',
+            'phone' => 'tel',
+            'mobile' => 'tel',
+            'currency' => 'number',
+            'money' => 'number',
+            'integer' => 'number',
+            'int' => 'number',
+            'float' => 'number',
+            'date' => 'date',
+            'textarea' => 'textarea',
+            'multiline' => 'textarea',
+            'dropdown' => 'text',
+            'select' => 'text',
+            'url' => 'url',
+        ];
+
+        return $map[$type] ?? $type;
+    }
+
+    private static function getTemplateFieldDefinitions(string $templateDir): array
+    {
+        $definitions = [];
+        $templateFiles = glob($templateDir . '/*.html');
+        if ($templateFiles === false) {
+            return $definitions;
+        }
+
+        foreach ($templateFiles as $templateFile) {
+            $content = file_get_contents($templateFile);
+            if ($content === false) {
+                continue;
+            }
+
+            preg_match_all('/<!--\s*FIELD\s*:\s*([A-Za-z0-9_]+)\s*(?:\|\s*([A-Za-z0-9_-]+))?(?:\|\s*([^>]+?))?\s*-->/i', $content, $declaredFields, PREG_SET_ORDER);
+            $hasDeclaredFields = count($declaredFields) > 0;
+            foreach ($declaredFields as $fieldMatch) {
+                $fieldKey = $fieldMatch[1];
+                if ($fieldKey === 'TRACKING_ID') {
+                    continue;
+                }
+
+                $fieldType = $fieldMatch[2] ?? 'text';
+                $fieldLabel = trim((string) ($fieldMatch[3] ?? ''));
+
+                $normalizedType = self::normalizeFieldType($fieldType);
+                $definitions[$fieldKey] = [
+                    'label' => $fieldLabel !== '' ? $fieldLabel : self::humanizeFieldName($fieldKey),
+                    'type' => $normalizedType,
+                ];
+            }
+
+            if ($hasDeclaredFields) {
+                continue;
+            }
+
+            preg_match_all('/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/', $content, $placeholderMatches);
+            foreach ($placeholderMatches[1] as $fieldKey) {
+                if ($fieldKey === 'TRACKING_ID') {
+                    continue;
+                }
+
+                if (isset($definitions[$fieldKey])) {
+                    continue;
+                }
+
+                $definitions[$fieldKey] = [
+                    'label' => self::humanizeFieldName($fieldKey),
+                    'type' => 'text',
+                ];
+            }
+        }
+
+        return $definitions;
     }
 
     private static function saveSendRecord(
@@ -781,25 +890,17 @@ final class StudioController
             }
 
             if (!empty($uploadedAttachments)) {
-                $allowedExt = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'gif', 'webp'];
-                $allowedMime = [
-                    'application/pdf', 'application/x-pdf',
-                    'application/msword',
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'image/jpeg', 'image/png', 'image/gif', 'image/webp'
+                $disallowedExt = [
+                    'exe', 'bat', 'cmd', 'sh', 'php', 'phtml', 'cgi', 'pl', 'py', 'vbs', 'scr', 'msi', 'com', 'js', 'jar', 'apk'
                 ];
 
                 foreach ($uploadedAttachments as $file) {
                     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                    if (!in_array($ext, $allowedExt, true)) {
-                        echo json_encode(['status' => 'error', 'message' => 'Only PDF, DOC, DOCX, and image files are allowed.']); exit;
-                    }
-                    $mime = @mime_content_type($file['tmp_name']);
-                    if ($mime && !in_array($mime, $allowedMime, true)) {
-                        echo json_encode(['status' => 'error', 'message' => 'Unsupported file type.']); exit;
+                    if (in_array($ext, $disallowedExt, true)) {
+                        echo json_encode(['status' => 'error', 'message' => "Files with .{$ext} extension are not allowed for security reasons."]); exit;
                     }
                     if ((int) $file['size'] > self::MAX_ATTACH_BYTES) {
-                        echo json_encode(['status' => 'error', 'message' => 'Attachment too large (max 5 MB).']); exit;
+                        echo json_encode(['status' => 'error', 'message' => 'Attachment too large (max 25 MB).']); exit;
                     }
                 }
             }
@@ -1296,24 +1397,15 @@ final class StudioController
             ];
         }
 
-        $placeholderFields = [
-            'Hotel_Name'         => 'Hotel Name',
-            'Address'            => 'Address',
-            'City'               => 'City',
-            'State'              => 'State',
-            'Zip'                => 'Zip',
-            'Rooms'              => '# of Rooms',
-            'Extra'              => 'Total TVs',
-            'Hotel_Number'       => 'Hotel Phone',
-            'Contact_Person'     => 'Contact Person',
-            'First_Name'         => 'First Name',
-            'Email'              => 'Contact Email',
-            'Service_Provider'   => 'Service Provider',
-            'offeredProgramming' => 'Programming',
-            'System'             => 'System',
-            'Bill'               => 'Monthly Bill ($)',
-            'Upfront'            => 'Upfront Cost ($)',
-        ];
+        $templateFieldDefinitions = self::getTemplateFieldDefinitions($templateDir);
+        $placeholderFields = [];
+        foreach ($templateFieldDefinitions as $fieldKey => $fieldMeta) {
+            $placeholderFields[$fieldKey] = $fieldMeta['label'];
+        }
+        $placeholderFieldTypes = [];
+        foreach ($templateFieldDefinitions as $fieldKey => $fieldMeta) {
+            $placeholderFieldTypes[$fieldKey] = $fieldMeta['type'];
+        }
 
         require __DIR__ . '/../../public/views/studio.php';
     }

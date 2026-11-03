@@ -2,7 +2,7 @@
 /**
  * View File: public/views/studio.php
  * Included by StudioController.php
- * Variables provided: $availableTemplates, $placeholderFields, $statusMessage
+ * Variables provided: $availableTemplates, $placeholderFields, $placeholderFieldTypes, $statusMessage
  * Constants provided: APP_EMAIL, APP_PASSWORD, ADMIN_EMAIL, OTP_EXPIRY, SESSION_TTL, REFRESH_TTL, MAX_FAILS, BLOCK_TIME, CLD_CLOUD, CLD_PRESET, CLD_API_KEY, DB_PATH
  */
 ?>
@@ -17,6 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
     <style>
         .scroller { overflow-y: auto; scrollbar-width: thin; }
         .scroller::-webkit-scrollbar { width: 6px; }
@@ -43,6 +44,37 @@
         .gallery-thumb .del-btn { position: absolute; top: 4px; right: 4px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; border: none; cursor: pointer; }
         .tb-btn { padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 0.25rem; background: #f1f5f9; color: #334155; transition: all 0.2s; cursor: pointer; border: 1px solid #cbd5e1; }
         .tb-btn:hover { background: #e2e8f0; }
+        .office-ribbon { display:flex; flex-wrap:wrap; align-items:center; gap:0.25rem; padding:0.5rem 0.625rem; background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%); border-bottom:1px solid #dfe7f1; }
+        .office-group { display:flex; align-items:center; gap:0.25rem; padding:0.125rem 0.25rem; border:1px solid #dfe7f1; border-radius:0.5rem; background:rgba(255,255,255,0.7); box-shadow:inset 0 1px 0 rgba(255,255,255,0.9); }
+        .office-group.insert-group { padding:0.25rem 0.4rem; }
+        .toolbar-caption { font-size:0.63rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#64748b; padding:0 0.1rem; }
+        .office-tool { display:inline-flex; align-items:center; justify-content:center; min-width:1.75rem; height:1.9rem; padding:0 0.45rem; border:1px solid #d1d9e6; border-radius:0.375rem; background:linear-gradient(180deg,#ffffff,#f4f7fb); color:#334155; font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.15s ease; }
+        .office-tool:hover { background:linear-gradient(180deg,#edf6ff,#dfeeff); border-color:#9ec5ff; color:#1d4ed8; }
+        .office-tool.active { background:linear-gradient(180deg,#dfeeff,#cfe1ff); border-color:#8ab5ff; color:#1d4ed8; }
+        .office-select { appearance:none; border:1px solid #d1d9e6; background:linear-gradient(180deg,#ffffff,#f7fafc); color:#334155; border-radius:0.375rem; font-size:0.75rem; padding:0.35rem 1.5rem 0.35rem 0.5rem; min-height:1.9rem; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 0.45rem center; }
+        .office-color-cluster { position:relative; display:flex; align-items:center; gap:0.25rem; padding:0.125rem 0.25rem; border:1px solid #dfe7f1; border-radius:0.5rem; background:rgba(255,255,255,0.7); }
+        .office-color-swatch-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0.2rem; padding:0.2rem; background:#f8fafc; border:1px solid #dfe7f1; border-radius:0.375rem; }
+        .swatch-btn { width:0.9rem; height:0.9rem; border:1px solid rgba(15,23,42,0.25); border-radius:0.2rem; cursor:pointer; padding:0; }
+        .swatch-btn:hover { transform:translateY(-1px); box-shadow:0 0 0 2px rgba(59,130,246,.12); }
+        .color-chip-label { display:inline-flex; align-items:center; justify-content:center; width:1.1rem; height:1.1rem; font-size:0.55rem; font-weight:800; color:#334155; }
+        .toolbar-divider { width:1px; height:1.6rem; background:linear-gradient(180deg,#dbe3ee,#b8c4d4); margin:0 0.1rem; }
+        .ms-compact { min-height: 1.7rem; }
+        .toolbar-dropdown { position:absolute; right:0; top:calc(100% + 6px); z-index:60; min-width:240px; border:1px solid #dbe4f0; border-radius:0.5rem; background:#fff; box-shadow:0 10px 30px rgba(15,23,42,0.12); padding:0.5rem; display:none; }
+        .toolbar-dropdown.open { display:block !important; }
+        .table-cell-selected { outline:2px solid #2563eb; outline-offset:-1px; background:#eff6ff; }
+        .color-menu-header { display:flex; align-items:center; justify-content:space-between; font-size:0.68rem; color:#475569; margin-bottom:0.35rem; }
+        .color-menu-header .switch { display:inline-flex; align-items:center; gap:0.3rem; font-size:0.68rem; }
+        .theme-grid { display:grid; grid-template-columns:repeat(8, minmax(0, 1fr)); gap:0.22rem; margin-bottom:0.45rem; }
+        .theme-grid .swatch-btn { width:1rem; height:1rem; border:1px solid rgba(15,23,42,0.25); }
+        .standard-grid { display:grid; grid-template-columns:repeat(8, minmax(0, 1fr)); gap:0.22rem; margin-bottom:0.45rem; }
+        .standard-grid .swatch-btn { width:1rem; height:1rem; }
+        .color-menu-actions { display:flex; align-items:center; justify-content:space-between; margin-top:0.2rem; }
+        .more-colors-btn { border:1px solid #dfe7f1; background:#f8fafc; border-radius:0.25rem; padding:0.2rem 0.4rem; font-size:0.68rem; color:#475569; cursor:pointer; }
+        .gradient-toggle { display:flex; align-items:center; gap:0.35rem; font-size:0.68rem; color:#475569; }
+        .toolbar-dropdown input[type="color"] { width:1.5rem; height:1.5rem; border:1px solid #cbd5e1; border-radius:0.25rem; padding:0; background:transparent; }
+        #table-context-menu { position:fixed; display:none; z-index:9999; background:#fff; border:1px solid #dfe7f1; border-radius:0.5rem; box-shadow:0 10px 30px rgba(15,23,42,0.18); min-width:170px; padding:0.3rem 0; }
+        #table-context-menu button { display:block; width:100%; border:none; background:transparent; text-align:left; padding:0.45rem 0.75rem; font-size:0.75rem; color:#334155; cursor:pointer; }
+        #table-context-menu button:hover { background:#f1f5f9; }
         
         .sec-hdr { font-weight: 600; font-size: 0.75rem; color: #1e293b; display: flex; justify-between: space-between; align-items: center; cursor: pointer; padding: 0.15rem 0.5rem; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); border-radius: 0.375rem; margin-bottom: 0.125rem; border-left: 3px solid #3b82f6; user-select: none; }
         .sec-hdr:hover { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); }
@@ -217,25 +249,67 @@
 </head>
 <body class="bg-gray-100 flex flex-col h-screen overflow-hidden text-sm">
 
-    <header class="bg-slate-900 text-white p-3 flex-shrink-0">
-        <div class="flex justify-between items-center">
-            <div class="font-bold text-lg">⚡ Proposal Studio Pro
+    <header class="bg-slate-900 text-white px-4 py-2 flex-shrink-0 shadow-md border-b border-slate-800">
+        <div class="flex flex-wrap justify-between items-center gap-3">
+            <!-- Left Branding -->
+            <div class="flex items-center gap-3">
+                <div class="font-bold text-lg tracking-wide flex items-center gap-2">
+                    <span>⚡</span> <span>Proposal Studio Pro</span>
                 </div>
-                <small class="font-regular text-gray">V 1.0.0.8</small>
-            <div class="flex items-center gap-4">
-                <span class="text-slate-300"><?= htmlspecialchars(APP_EMAIL, ENT_QUOTES) ?></span>
-                <button type="button" onclick="openSentEmailsModal()" class="text-orange-400 hover:text-orange-300 text-sm">📤 Resend</button>
-                <button type="button" onclick="openBulkModal()" class="text-yellow-400 hover:text-yellow-300 text-sm">📊 Bulk Send</button>
-                <button type="button" onclick="openSavedListsModal()" class="text-blue-400 hover:text-blue-300 text-sm">💾 Saved Data</button>
-                <button type="button" onclick="openSchedulerModal()" class="text-teal-400 hover:text-teal-300 text-sm">🕒 Scheduler</button>
-                <a href="<?= BASE_PATH ?>/tracking" target="_blank" class="text-green-400 hover:text-green-300 text-sm">📊 Tracking</a>
-                <button type="button" onclick="openCallbacksPanel()" class="text-purple-400 hover:text-purple-300 text-sm">📞 Callbacks</button>
-                <a href="<?= BASE_PATH ?>/admin" class="text-blue-400 hover:text-blue-300 text-sm">Admin</a>
-                <a href="<?= BASE_PATH ?>/logout" class="text-red-400 hover:text-red-300 text-sm">Logout</a>
+                <span class="text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full">V 1.0.0.8</span>
+            </div>
+
+            <!-- Center Navigation / Action Buttons -->
+            <div class="flex flex-wrap items-center gap-1.5">
+                <a href="<?= BASE_PATH ?>/tracking" class="text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors px-2.5 py-1.5 rounded-md border border-slate-700 flex items-center gap-1.5" title="Open Email Tracking Dashboard">
+                    <span>📊</span> <span>Tracking</span>
+                </a>
+                
+                <button type="button" onclick="openBulkModal()" class="text-xs font-medium bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 hover:text-emerald-200 transition-colors px-2.5 py-1.5 rounded-md border border-emerald-700/60 flex items-center gap-1.5 cursor-pointer shadow-sm" title="Bulk Send CSV Campaign">
+                    <span>📈</span> <span>Bulk Send</span>
+                </button>
+                
+                <button type="button" onclick="openSavedListsModal()" class="text-xs font-medium bg-sky-950/60 hover:bg-sky-900/80 text-sky-300 hover:text-sky-200 transition-colors px-2.5 py-1.5 rounded-md border border-sky-700/60 flex items-center gap-1.5 cursor-pointer shadow-sm" title="View Saved Bulk Data Lists">
+                    <span>💾</span> <span>Saved Data</span>
+                </button>
+                
+                <button type="button" onclick="openSchedulerModal()" class="text-xs font-medium bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 hover:text-amber-200 transition-colors px-2.5 py-1.5 rounded-md border border-amber-700/60 flex items-center gap-1.5 cursor-pointer shadow-sm" title="Auto Resend Scheduler Settings">
+                    <span>🕒</span> <span>Scheduler</span>
+                </button>
+
+                <button type="button" onclick="openSentEmailsModal()" class="text-xs font-medium bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 hover:text-indigo-200 transition-colors px-2.5 py-1.5 rounded-md border border-indigo-700/60 flex items-center gap-1.5 cursor-pointer shadow-sm" title="Search & Resend Sent Proposals">
+                    <span>📤</span> <span>Sent History</span>
+                </button>
+                
+                <button type="button" onclick="openCallbacksPanel()" class="text-xs font-medium bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 hover:text-purple-200 transition-colors px-2.5 py-1.5 rounded-md border border-purple-700/60 flex items-center gap-1.5 cursor-pointer shadow-sm" title="View Pending Callbacks">
+                    <span>📞</span> <span>Callbacks</span>
+                </button>
+
+                <button type="button" onclick="resetStudioState()" class="text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors px-2.5 py-1.5 rounded-md border border-slate-700 flex items-center gap-1.5 cursor-pointer" title="Reset current template and fields">
+                    <span>🔄</span> <span>Reset</span>
+                </button>
+
+                <?php 
+                $currentUser = \App\Core\Auth::currentUser();
+                $isEmailTracker = ($currentUser['role'] ?? '') === 'email_tracker';
+                if (!$isEmailTracker): 
+                ?>
+                    <a href="<?= BASE_PATH ?>/admin" class="text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors px-2.5 py-1.5 rounded-md border border-slate-700 flex items-center gap-1.5" title="Admin Settings & Users">
+                        <span>🛡️</span> <span>Admin</span>
+                    </a>
+                <?php endif; ?>
+            </div>
+
+            <!-- Right Profile & Logout -->
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-400 font-mono hidden md:inline"><?= htmlspecialchars(APP_EMAIL, ENT_QUOTES) ?></span>
+                <a href="<?= BASE_PATH ?>/logout" class="text-xs font-medium bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors px-3 py-1.5 rounded-md border border-red-500/20 flex items-center gap-1">
+                    <span>🚪</span> <span>Logout</span>
+                </a>
             </div>
         </div>
         <?php if (!empty($statusMessage)): ?>
-            <div class="mt-2 p-2 rounded text-xs <?= strpos(strtolower($statusMessage), 'error') !== false ? 'bg-red-500/20 text-red-200' : 'bg-green-500/20 text-green-200' ?>">
+            <div class="mt-2 p-2 rounded text-xs <?= strpos(strtolower($statusMessage), 'error') !== false ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 'bg-green-500/20 text-green-200 border border-green-500/30' ?>">
                 <?= htmlspecialchars($statusMessage, ENT_QUOTES) ?>
             </div>
         <?php endif; ?>
@@ -281,79 +355,59 @@
                     </div>
                 </div>
                 <div class="sec-body">
-                    <?php 
-                    $groups = [
-                        'Property' => ['Hotel_Name', 'Address', ['City', 'State', 'Zip']],
-                        'Contact'  => [['Rooms', 'Extra'], 'Email', 'Hotel_Number', 'Contact_Person', 'First_Name' ],
-                        'Deal'     => ['Service_Provider', 'System','offeredProgramming',  'Bill', 'Upfront']
-                    ];
-                    $rendered = [];
-
+                    <?php
                     if (!function_exists('renderStudioField')) {
-                        function renderStudioField($key, $label) {
-                            $type = ($key === 'Service_Provider') ? 'provider' : (($key === 'System') ? 'system' : 'programming');
-                            $html = '<label class="field-label whitespace-nowrap overflow-hidden text-ellipsis" title="Click to insert {{' . $key . '}} into focused field" onclick="insertField(\'{{' . $key . '}}\')">'
-                                . htmlspecialchars($label, ENT_QUOTES)
-                                . ' <span id="ph_cnt_' . $key . '" class="ph-count-badge" style="display:none;background:#3b82f6;color:#fff;font-size:9px;font-weight:700;border-radius:9px;padding:1px 5px;margin-left:3px;vertical-align:middle;"></span>'
-                                . '</label>';
-                            if (in_array($key, ['Service_Provider', 'System', 'offeredProgramming'], true)) {
-                                $html .= '<div class="relative flex items-center">';
-                                $html .= '<input type="text" id="p_' . $key . '" list="dl_' . $key . '" class="field-input flex-1 pr-14" placeholder="Select or type..." onchange="onStudioFieldChange(\'' . $key . '\')" onkeydown="if(event.key===\'Enter\'){event.preventDefault();inlineAddOption(\'' . $type . '\',\'dl_' . $key . '\',\'p_' . $key . '\');}">';
-                                $html .= '<datalist id="dl_' . $key . '"></datalist>';
-                                $html .= '<div class="absolute right-1 flex gap-0.5">';
-                                $html .= '<button type="button" onclick="inlineAddOption(\'' . $type . '\',\'dl_' . $key . '\',\'p_' . $key . '\')" class="text-slate-400 hover:text-blue-600 transition-colors bg-transparent border-none cursor-pointer p-1" title="Save this option"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg></button>';
-                                $html .= '<button type="button" onclick="inlineDeleteOption(\'' . $type . '\',\'p_' . $key . '\')" class="text-slate-400 hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1" title="Delete this option"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>';
-                                $html .= '</div></div>';
+                        function renderStudioField($key, $label, $type = 'text') {
+                            $safeKey = (string) $key;
+                            $safeLabel = htmlspecialchars((string) $label, ENT_QUOTES, 'UTF-8');
+                            $type = strtolower((string) $type);
+                            $fieldType = match ($type) {
+                                'email' => 'email',
+                                'tel' => 'tel',
+                                'url' => 'url',
+                                'number' => 'number',
+                                'date' => 'date',
+                                default => 'text',
+                            };
+
+                            $placeholder = json_encode("{{{$safeKey}}}", JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                            $labelHtml = '<label class="field-label whitespace-nowrap overflow-hidden text-ellipsis" title="Click to insert {{' . $safeKey . '}} into focused field" onclick="insertField(' . $placeholder . ')">' . $safeLabel . ' <span id="ph_cnt_' . $safeKey . '" class="ph-count-badge" style="display:none;background:#3b82f6;color:#fff;font-size:9px;font-weight:700;border-radius:9px;padding:1px 5px;margin-left:3px;vertical-align:middle;"></span></label>';
+
+                            if (in_array($safeKey, ['Service_Provider', 'System', 'offeredProgramming'], true)) {
+                                $listType = ($safeKey === 'Service_Provider') ? 'provider' : (($safeKey === 'System') ? 'system' : 'programming');
+                                $fieldId = 'p_' . $safeKey;
+                                $datalistId = 'dl_' . $safeKey;
+                                $listTypeJson = json_encode($listType, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                                $fieldIdJson = json_encode($fieldId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                                $datalistIdJson = json_encode($datalistId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                                $keyJson = json_encode($safeKey, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                                $labelHtml .= '<div class="relative flex items-center">';
+                                $labelHtml .= '<input type="text" id="' . $fieldId . '" list="' . $datalistId . '" class="field-input flex-1 pr-14" placeholder="Select or type..." onchange="onStudioFieldChange(' . $keyJson . ')" onkeydown="if(event.key===\'Enter\'){event.preventDefault();inlineAddOption(' . $listTypeJson . ',' . $datalistIdJson . ',' . $fieldIdJson . ');}">';
+                                $labelHtml .= '<datalist id="' . $datalistId . '"></datalist>';
+                                $labelHtml .= '<div class="absolute right-1 flex gap-0.5">';
+                                $labelHtml .= '<button type="button" onclick="inlineAddOption(' . $listTypeJson . ',' . $datalistIdJson . ',' . $fieldIdJson . ')" class="text-slate-400 hover:text-blue-600 transition-colors bg-transparent border-none cursor-pointer p-1" title="Save this option"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg></button>';
+                                $labelHtml .= '<button type="button" onclick="inlineDeleteOption(' . $listTypeJson . ',' . $fieldIdJson . ')" class="text-slate-400 hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1" title="Delete this option"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>';
+                                $labelHtml .= '</div></div>';
+                            } elseif ($type === 'textarea') {
+                                $labelHtml .= '<textarea id="p_' . $safeKey . '" class="field-input" rows="3"></textarea>';
                             } else {
-                                $html .= '<input type="text" id="p_' . $key . '" class="field-input">';
+                                $labelHtml .= '<input type="' . $fieldType . '" id="p_' . $safeKey . '" class="field-input">';
                             }
-                            return $html;
+
+                            return $labelHtml;
                         }
                     }
 
-                    foreach($groups as $grp => $keys) {
-                        if ($grp !== 'Property') {
-                            echo '<hr style="border:0;border-top:1px solid #e2e8f0;margin:2px 0;">';
-                        }
-                        foreach($keys as $key_or_group) {
-                            if (is_array($key_or_group)) {
-                                echo '<div class="flex flex-row gap-1 mb-0.5">';
-                                foreach($key_or_group as $key) {
-                                    if (isset($placeholderFields[$key])) {
-                                        $rendered[] = $key;
-                                        echo '<div class="flex flex-col gap-0 flex-1 min-w-0">';
-                                        echo renderStudioField($key, $placeholderFields[$key]);
-                                        echo '</div>';
-                                    }
-                                }
-                                echo '</div>';
-                            } else {
-                                $key = $key_or_group;
-                                if (isset($placeholderFields[$key])) {
-                                    $rendered[] = $key;
-                                    echo '<div class="flex flex-col gap-0 mb-0.5">';
-                                    echo renderStudioField($key, $placeholderFields[$key]);
-                                    echo '</div>';
-                                }
-                            }
-                        }
-                    }
-                    foreach($placeholderFields as $key => $label) {
-                        if (!in_array($key, $rendered)) {
-                            echo '<div class="flex flex-col gap-0 mb-0.5">';
-                            echo renderStudioField($key, $label);
-                            echo '</div>';
-                        }
+                    foreach ($placeholderFields as $key => $label) {
+                        echo '<div class="flex flex-col gap-0 mb-0.5" data-template-field-key="' . htmlspecialchars((string)$key, ENT_QUOTES, 'UTF-8') . '">';
+                        echo renderStudioField($key, $label, $placeholderFieldTypes[$key] ?? 'text');
+                        echo '</div>';
                     }
                     ?>
-                    
-                    <div id="track_id_live_alert" class="hidden mt-2 p-2.5 rounded-lg border text-xs leading-snug"></div>
                 </div>
             </div>
 
-
-
-            <!-- SECTION 4: Send / Draft -->
+            <!-- SECTION 3: Send / Draft -->
             <div>
                 <!-- <div class="sec-hdr">✉️ Send</div> -->
                  <hr>
@@ -362,17 +416,6 @@
                     <div class="grid grid-cols-2 gap-2">
                         <button type="button" id="draft_btn" class="action-btn-yellow" onclick="processEmail(true)">📝 Draft</button>
                         <button type="button" id="send_btn" class="action-btn-green" onclick="processEmail(false)">🚀 Send</button>
-                    </div>
-                    <div class="relative" id="attach_dropdown_container">
-                        <button type="button" class="upload-zone" style="height:36px;flex-direction:row;gap:6px;margin-top:6px;width:100%;" onclick="toggleAttachDropdown(event)">
-                            <span style="font-size:1rem;">📎</span>
-                            <span id="attachment_label_text">Attach</span>
-                        </button>
-                        <div id="attach_dropdown" class="hidden absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden text-sm flex-col">
-                            <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 border-b border-slate-100" onclick="attachFromLibrary()">📚 Browse Library</button>
-                            <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700" onclick="document.getElementById('sys_attach_input').click()">💻 This PC</button>
-                        </div>
-                        <input type="file" id="sys_attach_input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp" multiple style="display:none;" onchange="onAttachFileChange(this)">
                     </div>
                     <div id="selected-attachments" style="display:flex;flex-direction:column;gap:6px;max-height:170px;overflow:auto;padding:4px 0;margin-top:6px;"></div>
                 </div>
@@ -384,117 +427,240 @@
             
            <div class="sticky top-0 bg-white border-b border-slate-200 z-10 shadow-sm">
     <!-- Tools Row (collapsible) -->
-    <div id="toolbar_content" class="flex flex-wrap gap-1.5 items-center px-2 py-1.5 border-b border-slate-100">
-        <!-- Formatting Tools -->
-        <select onchange="execCmd('fontName', this.value)" class="border border-slate-200 rounded p-1 text-sm bg-slate-50 text-slate-700 outline-none focus:border-blue-500">
-            <option value="Arial">Arial</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Verdana">Verdana</option>
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Courier New">Courier New</option>
-        </select>
-        
-        <select onchange="applyFontSize(this.value)" class="border border-slate-200 rounded p-1 text-sm bg-slate-50 text-slate-700 outline-none focus:border-blue-500">
-            <option value="1">XS</option>
-            <option value="2">S</option>
-            <option value="3" selected>M</option>
-            <option value="4">L</option>
-            <option value="5">XL</option>
-            <option value="6">XXL</option>
-        </select>
-        
-        <div class="w-px h-6 bg-slate-300 mx-1"></div>
-        
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded font-bold font-serif w-8 h-8 flex items-center justify-center" onclick="execCmd('bold')">B</button>
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded italic font-serif w-8 h-8 flex items-center justify-center" onclick="execCmd('italic')">I</button>
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded underline font-serif w-8 h-8 flex items-center justify-center" onclick="execCmd('underline')">U</button>
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded line-through font-serif w-8 h-8 flex items-center justify-center" onclick="execCmd('strikeThrough')">S</button>
-        
-        <div class="w-px h-6 bg-slate-300 mx-1"></div>
-        
-        <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded px-1 h-8">
-            <span class="text-xs font-bold text-slate-600">A</span>
-            <input type="color" id="text_color" value="#000000" class="w-5 h-5 p-0 border-0 cursor-pointer bg-transparent">
-        </div>
-        <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded px-1 h-8">
-            <span class="text-xs font-bold text-slate-600">H</span>
-            <input type="color" id="highlight_color" value="#fef08a" class="w-5 h-5 p-0 border-0 cursor-pointer bg-transparent">
-        </div>
-        <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded px-1 h-8">
-            <span class="text-xs font-bold text-slate-600">BG</span>
-            <input type="color" id="canvas_bg" value="#ffffff" class="w-5 h-5 p-0 border-0 cursor-pointer bg-transparent">
-        </div>
-        
-        <div class="w-px h-6 bg-slate-300 mx-1"></div>
-        
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded w-8 h-8 flex items-center justify-center" onclick="execCmd('justifyLeft')">⇤</button>
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded w-8 h-8 flex items-center justify-center" onclick="execCmd('justifyCenter')">↔</button>
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded w-8 h-8 flex items-center justify-center" onclick="execCmd('justifyRight')">⇥</button>
-        
-        <div class="w-px h-6 bg-slate-300 mx-1"></div>
-        
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded px-2 py-1 text-sm flex items-center" onclick="execCmd('insertUnorderedList')">• List</button>
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded px-2 py-1 text-sm flex items-center" onclick="execCmd('insertOrderedList')">1. List</button>
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded w-8 h-8 flex items-center justify-center" onclick="execCmd('indent')">⇥</button>
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded w-8 h-8 flex items-center justify-center" onclick="execCmd('outdent')">⇤</button>
-
-        <div class="w-px h-6 bg-slate-300 mx-1"></div>
-        
-        <button type="button" class="tb-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 rounded px-2 py-1 text-sm transition-colors" onclick="insertTableComponent()">+ Table</button>
-        <button type="button" class="tb-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 rounded px-2 py-1 text-sm transition-colors" onclick="insertDividerComponent()">— Divider</button>
-        <button type="button" class="tb-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 rounded px-2 py-1 text-sm transition-colors" onclick="openGallery()">🖼️ Insert Image</button>
-        
-        <div class="relative group" id="pdf_link_dropdown_container">
-            <button type="button" class="tb-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 rounded px-2 py-1 text-sm transition-colors flex items-center gap-1" onclick="togglePdfLinkDropdown(event)">🔗 Insert PDF Link</button>
-            <div id="pdf_link_dropdown" class="hidden absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-50 w-40 overflow-hidden text-sm flex-col">
-                <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 border-b border-slate-100" onclick="insertPdfLinkFromLibrary()">📚 Browse Library</button>
-                <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700" onclick="document.getElementById('cld_pdf_input').click()">☁️ Upload New</button>
-            </div>
-        </div>
-
-        <button type="button" class="tb-btn bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded px-2 py-1 text-sm transition-colors flex items-center gap-1" onclick="insertCallbackLink()">📞 Callback Link</button>
-        
-        <div class="w-px h-6 bg-slate-300 mx-1"></div>
-        
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded w-8 h-8 flex items-center justify-center" onclick="customUndo()">↩</button>
-        <button type="button" class="tb-btn text-slate-700 hover:bg-slate-100 rounded w-8 h-8 flex items-center justify-center" onclick="customRedo()">↪</button>
-
-        <div class="w-px h-6 bg-slate-300 mx-1"></div>
-
-        <!-- Template Tools -->
-        <div class="flex items-center gap-2">
-            <span class="text-slate-500 text-sm" title="Templates">🎨</span>
-            <select id="template_select" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded focus:ring-blue-500 focus:border-blue-500 py-1 px-2 outline-none cursor-pointer w-36" onchange="loadSelectedTemplate()">
-                  <?php foreach($availableTemplates as $k => $t): ?>
-                    <option value="<?= htmlspecialchars($k, ENT_QUOTES) ?>"><?= htmlspecialchars($t['title'], ENT_QUOTES) ?></option>
-                <?php endforeach; ?>
+    <div id="toolbar_content" class="office-ribbon">
+        <div class="office-group">
+            <select onchange="applyFontFamily(this.value)" class="office-select ms-compact">
+                <option value="Arial">Arial</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Courier New">Courier New</option>
+            </select>
+            <select onchange="applyFontSize(this.value)" class="office-select ms-compact">
+                <option value="1">XS</option>
+                <option value="2">S</option>
+                <option value="3" selected>M</option>
+                <option value="4">L</option>
+                <option value="5">XL</option>
+                <option value="6">XXL</option>
             </select>
         </div>
 
-        <form id="tpl_upload_form" method="POST" enctype="multipart/form-data" class="m-0 flex">
-            <input type="hidden" name="action" value="upload_template">
-            <label class="cursor-pointer flex items-center gap-1 text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2 py-1 rounded transition-colors text-sm font-medium shadow-sm">
-                <span>📄</span>
-                <span>Upload</span>
-                <input type="file" id="template_file_input" name="template_file" accept=".html" class="hidden" required>
-            </label>
-        </form>
+        <div class="toolbar-divider"></div>
 
-        <div class="flex items-center relative">
-            <div class="flex shadow-sm rounded-md">
-                <input type="text" id="new_template_name" placeholder="Save as..." class="bg-slate-50 border border-slate-200 border-r-0 text-slate-700 text-sm rounded-l-md focus:ring-blue-500 focus:border-blue-500 py-1 px-2 w-32 outline-none placeholder-slate-400">
-                <button type="button" id="save_tpl_btn" onclick="saveNewTemplate(null)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-r-md text-sm font-medium transition-colors flex items-center gap-1" title="Choose whether to save with placeholders or values">
-                    💾 Save
-                </button>
+        <div class="office-group">
+            <button type="button" class="office-tool font-bold font-serif" onclick="execCmd('bold')" title="Bold">B</button>
+            <button type="button" class="office-tool italic font-serif" onclick="execCmd('italic')" title="Italic">I</button>
+            <button type="button" class="office-tool underline font-serif" onclick="execCmd('underline')" title="Underline">U</button>
+            <button type="button" class="office-tool line-through font-serif" onclick="execCmd('strikeThrough')" title="Strikethrough">S</button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="office-color-cluster" title="Text color">
+            <span class="color-chip-label">A</span>
+            <button type="button" class="color-picker-trigger office-tool" data-target="text_color" data-type="text" title="Text color">▾</button>
+            <input type="color" id="text_color" value="#000000" class="w-5 h-5 p-0 border border-slate-200 rounded cursor-pointer bg-transparent" title="Text color">
+            <div class="toolbar-dropdown" data-menu="text_color_menu">
+                <div class="color-menu-header">
+                    <span>Automatic</span>
+                    <span class="switch"><input type="checkbox" /> High-contrast only</span>
+                </div>
+                <div class="theme-grid">
+                    <button type="button" class="swatch-btn" data-color="#000000" style="background:#000000" title="Black"></button>
+                    <button type="button" class="swatch-btn" data-color="#ffffff" style="background:#ffffff" title="White"></button>
+                    <button type="button" class="swatch-btn" data-color="#d1d5db" style="background:#d1d5db" title="Gray"></button>
+                    <button type="button" class="swatch-btn" data-color="#93c5fd" style="background:#93c5fd" title="Blue"></button>
+                    <button type="button" class="swatch-btn" data-color="#f9a8d4" style="background:#f9a8d4" title="Pink"></button>
+                    <button type="button" class="swatch-btn" data-color="#a7f3d0" style="background:#a7f3d0" title="Green"></button>
+                    <button type="button" class="swatch-btn" data-color="#fcd34d" style="background:#fcd34d" title="Yellow"></button>
+                    <button type="button" class="swatch-btn" data-color="#fdba74" style="background:#fdba74" title="Orange"></button>
+                    <button type="button" class="swatch-btn" data-color="#c4b5fd" style="background:#c4b5fd" title="Purple"></button>
+                    <button type="button" class="swatch-btn" data-color="#67e8f9" style="background:#67e8f9" title="Cyan"></button>
+                    <button type="button" class="swatch-btn" data-color="#fca5a5" style="background:#fca5a5" title="Red"></button>
+                    <button type="button" class="swatch-btn" data-color="#bfdbfe" style="background:#bfdbfe" title="Light Blue"></button>
+                    <button type="button" class="swatch-btn" data-color="#d9f99d" style="background:#d9f99d" title="Lime"></button>
+                    <button type="button" class="swatch-btn" data-color="#e5e7eb" style="background:#e5e7eb" title="Silver"></button>
+                    <button type="button" class="swatch-btn" data-color="#ddd6fe" style="background:#ddd6fe" title="Lilac"></button>
+                    <button type="button" class="swatch-btn" data-color="#fef3c7" style="background:#fef3c7" title="Beige"></button>
+                </div>
+                <div class="color-menu-header"><strong>Standard Colors</strong></div>
+                <div class="standard-grid">
+                    <button type="button" class="swatch-btn" data-color="#ff0000" style="background:#ff0000" title="Red"></button>
+                    <button type="button" class="swatch-btn" data-color="#ff6600" style="background:#ff6600" title="Orange Red"></button>
+                    <button type="button" class="swatch-btn" data-color="#ffff00" style="background:#ffff00" title="Yellow"></button>
+                    <button type="button" class="swatch-btn" data-color="#00ff00" style="background:#00ff00" title="Green"></button>
+                    <button type="button" class="swatch-btn" data-color="#00ffff" style="background:#00ffff" title="Cyan"></button>
+                    <button type="button" class="swatch-btn" data-color="#0000ff" style="background:#0000ff" title="Blue"></button>
+                    <button type="button" class="swatch-btn" data-color="#8000ff" style="background:#8000ff" title="Purple"></button>
+                    <button type="button" class="swatch-btn" data-color="#000000" style="background:#000000" title="Black"></button>
+                </div>
+                <div class="color-menu-actions">
+                    <button type="button" class="more-colors-btn">More Colors...</button>
+                    <label class="gradient-toggle"><input type="checkbox"> Gradient</label>
+                </div>
             </div>
-            <button type="button" onclick="deleteTemplate()" class="ml-2 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-md text-sm font-medium transition-colors" title="Delete selected template">
-                🗑 Delete
-            </button>
-            <button type="button" onclick="resetStudioState()" class="ml-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded-md text-sm font-medium transition-colors" title="Ctrl+Q to reset">
-                ↺ Reset
-            </button>
-            
-            <div id="save_tpl_status" class="hidden absolute top-full left-0 mt-1 text-xs px-2 py-1 rounded bg-white border border-slate-200 text-slate-700 z-50 shadow-lg whitespace-nowrap"></div>
+        </div>
+        <div class="office-color-cluster" title="Highlight color">
+            <span class="color-chip-label">H</span>
+            <button type="button" class="color-picker-trigger office-tool" data-target="highlight_color" data-type="highlight" title="Highlight color">▾</button>
+            <input type="color" id="highlight_color" value="#fef08a" class="w-5 h-5 p-0 border border-slate-200 rounded cursor-pointer bg-transparent" title="Highlight color">
+            <div class="toolbar-dropdown" data-menu="highlight_color_menu">
+                <div class="color-menu-header"><span>Automatic</span><span class="switch"><input type="checkbox" /> High-contrast only</span></div>
+                <div class="theme-grid">
+                    <button type="button" class="swatch-btn" data-color="#ffffff" style="background:#ffffff" title="White"></button>
+                    <button type="button" class="swatch-btn" data-color="#fef08a" style="background:#fef08a" title="Yellow"></button>
+                    <button type="button" class="swatch-btn" data-color="#bfdbfe" style="background:#bfdbfe" title="Blue"></button>
+                    <button type="button" class="swatch-btn" data-color="#bbf7d0" style="background:#bbf7d0" title="Green"></button>
+                    <button type="button" class="swatch-btn" data-color="#fed7aa" style="background:#fed7aa" title="Orange"></button>
+                    <button type="button" class="swatch-btn" data-color="#fecaca" style="background:#fecaca" title="Red"></button>
+                    <button type="button" class="swatch-btn" data-color="#e9d5ff" style="background:#e9d5ff" title="Purple"></button>
+                    <button type="button" class="swatch-btn" data-color="#d1fae5" style="background:#d1fae5" title="Mint"></button>
+                    <button type="button" class="swatch-btn" data-color="#fca5a5" style="background:#fca5a5" title="Rose"></button>
+                    <button type="button" class="swatch-btn" data-color="#c4b5fd" style="background:#c4b5fd" title="Lavender"></button>
+                    <button type="button" class="swatch-btn" data-color="#93c5fd" style="background:#93c5fd" title="Sky"></button>
+                    <button type="button" class="swatch-btn" data-color="#86efac" style="background:#86efac" title="Emerald"></button>
+                    <button type="button" class="swatch-btn" data-color="#f9a8d4" style="background:#f9a8d4" title="Pink"></button>
+                    <button type="button" class="swatch-btn" data-color="#fcd34d" style="background:#fcd34d" title="Gold"></button>
+                    <button type="button" class="swatch-btn" data-color="#fdba74" style="background:#fdba74" title="Peach"></button>
+                    <button type="button" class="swatch-btn" data-color="#e5e7eb" style="background:#e5e7eb" title="Gray"></button>
+                </div>
+                <div class="color-menu-header"><strong>Standard Colors</strong></div>
+                <div class="standard-grid">
+                    <button type="button" class="swatch-btn" data-color="#ffffff" style="background:#ffffff" title="White"></button>
+                    <button type="button" class="swatch-btn" data-color="#ffeb3b" style="background:#ffeb3b" title="Yellow"></button>
+                    <button type="button" class="swatch-btn" data-color="#ff9800" style="background:#ff9800" title="Orange"></button>
+                    <button type="button" class="swatch-btn" data-color="#f44336" style="background:#f44336" title="Red"></button>
+                    <button type="button" class="swatch-btn" data-color="#4caf50" style="background:#4caf50" title="Green"></button>
+                    <button type="button" class="swatch-btn" data-color="#2196f3" style="background:#2196f3" title="Blue"></button>
+                    <button type="button" class="swatch-btn" data-color="#9c27b0" style="background:#9c27b0" title="Purple"></button>
+                    <button type="button" class="swatch-btn" data-color="#000000" style="background:#000000" title="Black"></button>
+                </div>
+                <div class="color-menu-actions">
+                    <button type="button" class="more-colors-btn">More Colors...</button>
+                    <label class="gradient-toggle"><input type="checkbox"> Gradient</label>
+                </div>
+            </div>
+        </div>
+        <div class="office-color-cluster" title="Background color">
+            <span class="color-chip-label">BG</span>
+            <button type="button" class="color-picker-trigger office-tool" data-target="canvas_bg" data-type="background" title="Background color">▾</button>
+            <input type="color" id="canvas_bg" value="#ffffff" class="w-5 h-5 p-0 border border-slate-200 rounded cursor-pointer bg-transparent" title="Background color">
+            <div class="toolbar-dropdown" data-menu="background_color_menu">
+                <div class="color-menu-header"><span>Automatic</span><span class="switch"><input type="checkbox" /> High-contrast only</span></div>
+                <div class="theme-grid">
+                    <button type="button" class="swatch-btn" data-color="#ffffff" style="background:#ffffff" title="White"></button>
+                    <button type="button" class="swatch-btn" data-color="#f8fafc" style="background:#f8fafc" title="Slate"></button>
+                    <button type="button" class="swatch-btn" data-color="#dbeafe" style="background:#dbeafe" title="Blue"></button>
+                    <button type="button" class="swatch-btn" data-color="#dcfce7" style="background:#dcfce7" title="Green"></button>
+                    <button type="button" class="swatch-btn" data-color="#ffedd5" style="background:#ffedd5" title="Peach"></button>
+                    <button type="button" class="swatch-btn" data-color="#fce7f3" style="background:#fce7f3" title="Pink"></button>
+                    <button type="button" class="swatch-btn" data-color="#ede9fe" style="background:#ede9fe" title="Lilac"></button>
+                    <button type="button" class="swatch-btn" data-color="#f1f5f9" style="background:#f1f5f9" title="Gray"></button>
+                    <button type="button" class="swatch-btn" data-color="#e0f2fe" style="background:#e0f2fe" title="Sky"></button>
+                    <button type="button" class="swatch-btn" data-color="#d1fae5" style="background:#d1fae5" title="Mint"></button>
+                    <button type="button" class="swatch-btn" data-color="#fef3c7" style="background:#fef3c7" title="Cream"></button>
+                    <button type="button" class="swatch-btn" data-color="#fee2e2" style="background:#fee2e2" title="Rose"></button>
+                    <button type="button" class="swatch-btn" data-color="#ddd6fe" style="background:#ddd6fe" title="Lavender"></button>
+                    <button type="button" class="swatch-btn" data-color="#e2e8f0" style="background:#e2e8f0" title="Slate2"></button>
+                    <button type="button" class="swatch-btn" data-color="#cffafe" style="background:#cffafe" title="Aqua"></button>
+                    <button type="button" class="swatch-btn" data-color="#f5f3ff" style="background:#f5f3ff" title="Violet"></button>
+                </div>
+                <div class="color-menu-header"><strong>Standard Colors</strong></div>
+                <div class="standard-grid">
+                    <button type="button" class="swatch-btn" data-color="#ffffff" style="background:#ffffff" title="White"></button>
+                    <button type="button" class="swatch-btn" data-color="#f1f5f9" style="background:#f1f5f9" title="Gray"></button>
+                    <button type="button" class="swatch-btn" data-color="#dbeafe" style="background:#dbeafe" title="Blue"></button>
+                    <button type="button" class="swatch-btn" data-color="#dcfce7" style="background:#dcfce7" title="Green"></button>
+                    <button type="button" class="swatch-btn" data-color="#fef3c7" style="background:#fef3c7" title="Yellow"></button>
+                    <button type="button" class="swatch-btn" data-color="#fed7aa" style="background:#fed7aa" title="Orange"></button>
+                    <button type="button" class="swatch-btn" data-color="#fbcfe8" style="background:#fbcfe8" title="Pink"></button>
+                    <button type="button" class="swatch-btn" data-color="#000000" style="background:#000000" title="Black"></button>
+                </div>
+                <div class="color-menu-actions">
+                    <button type="button" class="more-colors-btn">More Colors...</button>
+                    <label class="gradient-toggle"><input type="checkbox"> Gradient</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="office-group">
+            <button type="button" class="office-tool" onclick="execCmd('justifyLeft')" title="Align left">☰</button>
+            <button type="button" class="office-tool" onclick="execCmd('justifyCenter')" title="Align center">≣</button>
+            <button type="button" class="office-tool" onclick="execCmd('justifyRight')" title="Align right">☰</button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="office-group">
+            <button type="button" class="office-tool" onclick="execCmd('insertUnorderedList')" title="Bulleted list">• List</button>
+            <button type="button" class="office-tool" onclick="execCmd('insertOrderedList')" title="Numbered list">1. List</button>
+            <button type="button" class="office-tool" onclick="execCmd('indent')" title="Indent">⇥</button>
+            <button type="button" class="office-tool" onclick="execCmd('outdent')" title="Outdent">⇤</button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="office-group insert-group">
+            <span class="toolbar-caption">Insert</span>
+            <button type="button" class="tb-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 rounded px-2 py-1 text-sm transition-colors" onclick="insertTableComponent()" title="Insert table">+ Table</button>
+            <button type="button" class="tb-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 rounded px-2 py-1 text-sm transition-colors" onclick="insertDividerComponent()" title="Insert divider">— Divider</button>
+            <button type="button" class="tb-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 rounded px-2 py-1 text-sm transition-colors" onclick="openGallery()" title="Insert image">🖼️ Image</button>
+            <div class="relative group" id="attach_dropdown_container">
+                <button type="button" class="tb-btn bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded px-2 py-1 text-sm transition-colors flex items-center gap-1" onclick="toggleAttachDropdown(event)" title="Attach file">
+                    <span>📎</span>
+                    <span id="attachment_label_text">Attach</span>
+                </button>
+                <div id="attach_dropdown" class="toolbar-dropdown" style="left:auto; right:0; min-width:180px;">
+                    <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 border-b border-slate-100 cursor-pointer" onclick="attachFromLibrary(event)">📚 Browse Library</button>
+                    <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 cursor-pointer" onclick="chooseLocalAttachment(event)">💻 This PC</button>
+                </div>
+                <input type="file" id="sys_attach_input" multiple style="display:none;" onchange="onAttachFileChange(this)">
+            </div>
+            <button type="button" class="tb-btn bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded px-2 py-1 text-sm transition-colors flex items-center gap-1" onclick="insertCallbackLink()" title="Insert callback link">📞 Insert Callback</button>
+            <div class="relative group" id="pdf_link_dropdown_container">
+                <button type="button" class="tb-btn bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 rounded px-2 py-1 text-sm transition-colors flex items-center gap-1" onclick="togglePdfLinkDropdown(event)" title="Insert Tracked PDF link">
+                    🔗 Tracked PDF
+                </button>
+                <div id="pdf_link_dropdown" class="toolbar-dropdown" style="left:auto; right:0; min-width:180px;">
+                    <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 border-b border-slate-100 cursor-pointer" onclick="insertPdfLinkFromLibrary(event)">📚 Browse Library</button>
+                    <button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-100 text-slate-700 cursor-pointer" onclick="chooseUploadPdf(event)">☁️ Upload New</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="office-group">
+            <button type="button" class="office-tool" onclick="customUndo()" title="Undo">↩</button>
+            <button type="button" class="office-tool" onclick="customRedo()" title="Redo">↪</button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="office-group items-center gap-2">
+            <label class="text-slate-600 text-xs font-semibold">Template</label>
+            <select id="template_select" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded focus:ring-blue-500 focus:border-blue-500 py-1 px-2 outline-none cursor-pointer w-36" onchange="loadSelectedTemplate()">
+                <?php foreach($availableTemplates as $k => $t): ?>
+                    <option value="<?= htmlspecialchars($k, ENT_QUOTES) ?>"><?= htmlspecialchars($t['title'], ENT_QUOTES) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <div class="flex shadow-sm rounded-md overflow-hidden relative">
+                <input type="text" id="new_template_name" class="border border-slate-200 border-r-0 bg-slate-50 text-slate-700 text-sm py-1 px-2 w-32 outline-none focus:border-blue-500 placeholder-slate-400" placeholder="Template name">
+                <button type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-sm font-medium" onclick="saveNewTemplate()">Save</button>
+                <div id="save_tpl_status" class="hidden absolute top-full left-0 mt-1 p-2 bg-white rounded shadow-lg border border-slate-200 z-50 text-xs min-w-[200px]"></div>
+            </div>
+            <form id="tpl_upload_form" method="POST" enctype="multipart/form-data" class="m-0 flex">
+                <input type="hidden" name="action" value="upload_template">
+                <label class="cursor-pointer inline-flex items-center gap-1 text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2 py-1 rounded transition-colors text-sm font-medium shadow-sm">
+                    <span>📄</span>
+                    <span>Upload</span>
+                    <input type="file" id="template_file_input" name="template_file" accept=".html" class="hidden" required>
+                </label>
+            </form>
+            <button type="button" class="tb-btn bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded px-2 py-1 text-sm transition-colors" onclick="deleteTemplate()">Delete</button>
         </div>
     </div>
 
@@ -528,6 +694,15 @@
         <button onclick="ctxOpenResizePanel()">↔️ Resize / Style</button>
         <hr>
         <button onclick="ctxDeleteImage()" class="text-red-400 hover:bg-red-500 hover:text-white">🗑️ Delete Image</button>
+    </div>
+
+    <div id="table-context-menu">
+        <button type="button" onclick="insertTableRow('above')">Insert row above</button>
+        <button type="button" onclick="insertTableRow('below')">Insert row below</button>
+        <button type="button" onclick="insertTableColumn('left')">Insert column left</button>
+        <button type="button" onclick="insertTableColumn('right')">Insert column right</button>
+        <button type="button" onclick="deleteTableSelection()">Delete selected cells</button>
+        <button type="button" onclick="mergeSelectedCells()">Merge selected cells</button>
     </div>
 
     <div id="ctx-menu-pdf" style="position:fixed;background:#1e293b;color:white;border-radius:6px;padding:4px 0;z-index:9999;display:none;box-shadow:0 10px 15px -3px rgba(0,0,0,0.5);min-width:170px;">
@@ -705,12 +880,21 @@
     </div>
 
     <!-- PDF Library Modal (used for Browse) -->
-    <div id="pdf-library-modal" style="position:fixed;inset:0;display:none;z-index:10001;pointer-events:none;">
-        <div id="pdf-library-panel" class="pdf-modal-panel" style="background:#fff;border-radius:18px;width:min(520px,calc(100vw - 24px));height:min(680px,calc(100vh - 40px));overflow:hidden;box-sizing:border-box;pointer-events:auto;position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+    <div id="pdf-library-modal" style="position:fixed;inset:0;display:none;z-index:10001;background:rgba(15,23,42,0.7);align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);">
+        <div id="pdf-library-panel" style="background:#fff;border-radius:18px;width:min(540px,calc(100vw - 24px));height:min(680px,calc(100vh - 40px));overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
             <!-- Header -->
             <div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:14px 18px;display:flex;justify-content:space-between;align-items:center; border-radius:18px 18px 0 0;flex-shrink:0;">
-                <span style="color:#fff;font-weight:700;font-size:0.9rem;">📚 PDF Library</span>
+                <span style="color:#fff;font-weight:700;font-size:0.9rem;">📚 Tracked PDF Library</span>
                 <button onclick="closePdfLibraryModal()" aria-label="Close" style="background:none;border:none;color:#cbd5e1;font-size:1.2rem;cursor:pointer;line-height:1;padding:2px 6px;border-radius:6px;">✕</button>
+            </div>
+            
+            <!-- Search Bar -->
+            <div style="padding:10px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;flex-shrink:0;display:flex;gap:8px;align-items:center;">
+                <div style="position:relative;flex:1;">
+                    <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:0.85rem;pointer-events:none;">🔍</span>
+                    <input type="text" id="pdf_search_input" oninput="filterPdfGallery(this.value)" placeholder="Search Tracked PDFs by name..." style="width:100%;padding:7px 10px 7px 32px;font-size:0.8rem;border:1px solid #cbd5e1;border-radius:8px;outline:none;background:#fff;box-sizing:border-box;">
+                </div>
+                <button type="button" onclick="document.getElementById('pdf_search_input').value=''; filterPdfGallery('');" style="background:#e2e8f0;border:none;color:#475569;border-radius:6px;padding:6px 10px;font-size:0.75rem;cursor:pointer;font-weight:600;" title="Clear search">Clear</button>
             </div>
             
             <div style="padding:16px;flex:1;overflow-y:auto;display:flex;flex-direction:column;">
@@ -721,6 +905,32 @@
                         <button type="button" onclick="loadMorePdfGallery()" style="width:100%;padding:7px 10px;border:none;border-radius:6px;background:#e2e8f0;color:#0f172a;font-size:0.7rem;font-weight:700;cursor:pointer;">Load more</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attachment Preview Modal -->
+    <div id="attachment-preview-modal" style="position:fixed;inset:0;z-index:20020;display:none;background:rgba(15,23,42,0.75);align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);">
+        <div style="background:#fff;border-radius:14px;width:min(920px,calc(100vw - 32px));max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);">
+            <!-- Modal Header -->
+            <div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:12px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:10px;overflow:hidden;min-width:0;">
+                    <span id="att_preview_icon" style="font-size:1.4rem;flex-shrink:0;">📎</span>
+                    <div style="overflow:hidden;min-width:0;">
+                        <div id="att_preview_title" style="color:#fff;font-weight:700;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Attachment Preview</div>
+                        <div id="att_preview_meta" style="color:#94a3b8;font-size:0.7rem;"></div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    <a id="att_preview_download_btn" href="#" target="_blank" download style="display:inline-flex;align-items:center;gap:4px;background:#334155;color:#e2e8f0;padding:5px 12px;border-radius:6px;font-size:0.75rem;font-weight:600;text-decoration:none;transition:background 0.2s;">
+                        <span>⬇</span> <span>Download / Open</span>
+                    </a>
+                    <button onclick="closeAttachmentPreviewModal()" style="background:none;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;line-height:1;padding:2px 6px;">✕</button>
+                </div>
+            </div>
+            <!-- Modal Content Area -->
+            <div id="att_preview_body" style="padding:16px;flex:1;overflow:auto;background:#f8fafc;display:flex;flex-direction:column;justify-content:center;min-height:300px;box-sizing:border-box;">
+                <!-- Content injected dynamically -->
             </div>
         </div>
     </div>
@@ -865,6 +1075,7 @@
             _lastSnapshot = canvas.innerHTML;
             undoStack = [];
             redoStack = [];
+            syncVisibleTemplateFields();
             saveTemplateSelection();
             updateStatusBar();
             if (phViewMode === 'values') liveApplyAll();
@@ -875,8 +1086,56 @@
         }
     }
 
-    const PERSIST_FIELDS = ['Hotel_Name','Address','City','State','Zip','Rooms','Extra','Email', 'Hotel_Number','Contact_Person','First_Name','Service_Provider','offeredProgramming','System','Bill','Upfront'];
+    const PERSIST_FIELDS = <?php echo json_encode(array_keys($placeholderFields)); ?>;
     const TEMPLATE_SELECTION_KEY = 'studio_selected_template';
+
+    function getTemplateFieldKeysFromHtml(html = '') {
+        const seen = new Set();
+        const result = [];
+        const fieldCommentRegex = /<!--\s*FIELD\s*:\s*([A-Za-z0-9_]+)\s*(?:\|\s*[A-Za-z0-9_-]+)?(?:\|\s*[^>]+?)?\s*-->/gi;
+        const placeholderRegex = /\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g;
+
+        for (const match of (html.matchAll ? html.matchAll(fieldCommentRegex) : [])) {
+            const key = match[1];
+            if (key && key !== 'TRACKING_ID' && !seen.has(key)) {
+                seen.add(key);
+                result.push(key);
+            }
+        }
+
+        if (result.length) {
+            return result;
+        }
+
+        for (const match of (html.matchAll ? html.matchAll(placeholderRegex) : [])) {
+            const key = match[1];
+            if (key && key !== 'TRACKING_ID' && !seen.has(key)) {
+                seen.add(key);
+                result.push(key);
+            }
+        }
+
+        return result;
+    }
+
+    function getCurrentPersistFields() {
+        const sel = document.getElementById('template_select');
+        const selectedValue = sel ? sel.value : '';
+        if (!selectedValue) return [...PERSIST_FIELDS];
+
+        const activeTemplate = rawTemplates[selectedValue];
+        const html = activeTemplate ? (activeTemplate.html || '') : '';
+        const keys = getTemplateFieldKeysFromHtml(html);
+        return keys.length ? keys : [...PERSIST_FIELDS];
+    }
+
+    function syncVisibleTemplateFields() {
+        const activeKeys = new Set(getCurrentPersistFields());
+        document.querySelectorAll('[data-template-field-key]').forEach((node) => {
+            const key = node.getAttribute('data-template-field-key');
+            node.style.display = activeKeys.has(key) ? '' : 'none';
+        });
+    }
 
     function saveTemplateSelection() {
         const sel = document.getElementById('template_select');
@@ -907,7 +1166,7 @@
         if (emailTagInput) { emailTags = []; renderEmailTags(); }
         if (document.getElementById('client_email')) document.getElementById('client_email').value = '';
 
-        PERSIST_FIELDS.forEach(key => {
+        getCurrentPersistFields().forEach(key => {
             const el = document.getElementById('p_' + key);
             if (el) el.value = '';
         });
@@ -1024,7 +1283,7 @@
     setupMathField('p_Upfront');
 
     // Excel paste autofill — paste tab-separated row into any field, fills subsequent fields in order
-    PERSIST_FIELDS.forEach((key, startIdx) => {
+    getCurrentPersistFields().forEach((key, startIdx) => {
         const el = document.getElementById('p_' + key);
         if (!el) return;
         el.addEventListener('paste', function(e) {
@@ -1032,9 +1291,10 @@
             if (!text.includes('\t')) return; // single value, let browser handle normally
             e.preventDefault();
             window._isPastingRow = true;
+            const currentFields = getCurrentPersistFields();
             const values = text.split('\t').map(v => v.trim().replace(/[\r\n]+/g, ''));
             values.forEach((val, i) => {
-                const fieldKey = PERSIST_FIELDS[startIdx + i];
+                const fieldKey = currentFields[startIdx + i];
                 if (!fieldKey) return;
                 const target = document.getElementById('p_' + fieldKey);
                 if (target) {
@@ -1043,8 +1303,7 @@
                 }
             });
             window._isPastingRow = false;
-            // Focus the field after the last filled one
-            const nextKey = PERSIST_FIELDS[startIdx + values.length];
+            const nextKey = currentFields[startIdx + values.length];
             const nextEl = nextKey ? document.getElementById('p_' + nextKey) : null;
             if (nextEl) nextEl.focus(); else el.blur();
         });
@@ -1054,7 +1313,8 @@
     function saveFormData() {
         const data = {};
         const sel = document.getElementById('template_select');
-        PERSIST_FIELDS.forEach(k => { 
+        const persistFields = getCurrentPersistFields();
+        persistFields.forEach(k => { 
             const el = document.getElementById('p_' + k); 
             if (el) {
                 data['p_' + k] = el.value; 
@@ -1071,7 +1331,8 @@
     function restoreFormData() {
         try {
             const data = JSON.parse(localStorage.getItem('studio_formdata') || '{}');
-            PERSIST_FIELDS.forEach(k => { 
+            const persistFields = getCurrentPersistFields();
+            persistFields.forEach(k => { 
                 const el = document.getElementById('p_' + k); 
                 if (el && data['p_' + k] !== undefined) {
                     el.value = data['p_' + k]; 
@@ -1145,11 +1406,34 @@
         }
 
         // Toolbar focus/selection loss prevention
-        document.querySelectorAll('.tb-btn').forEach(btn => {
+        document.querySelectorAll('.tb-btn, .office-tool, .office-select, .office-color-cluster input, .swatch-btn').forEach(btn => {
             btn.addEventListener('mousedown', function(e) {
                 saveCursor();
-                e.preventDefault(); // prevent canvas from losing focus
+                if (btn.tagName !== 'INPUT' && btn.tagName !== 'SELECT') e.preventDefault();
             });
+        });
+
+        document.querySelectorAll('.color-picker-trigger').forEach(trigger => {
+            trigger.addEventListener('click', function(e) {
+                const cluster = this.closest('.office-color-cluster');
+                const menu = cluster?.querySelector('.toolbar-dropdown');
+                if (!menu) return;
+                e.preventDefault();
+                const isOpen = menu.classList.contains('open');
+                document.querySelectorAll('.toolbar-dropdown').forEach(drop => drop.classList.remove('open'));
+                if (!isOpen) menu.classList.add('open');
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            const target = e.target;
+            if (!target.closest('.toolbar-dropdown') && 
+                !target.closest('.color-picker-trigger') &&
+                !target.closest('#attach_dropdown_container') &&
+                !target.closest('#pdf_link_dropdown_container')) {
+                document.querySelectorAll('.toolbar-dropdown').forEach(drop => drop.classList.remove('open'));
+                if (typeof activeDropdown !== 'undefined') activeDropdown = null;
+            }
         });
 
         // Color Inputs Configuration
@@ -1165,6 +1449,19 @@
         });
         document.getElementById('canvas_bg').addEventListener('input', function() {
             setCanvasBg(this.value);
+        });
+
+        document.querySelectorAll('.swatch-btn').forEach((swatch) => {
+            swatch.addEventListener('click', function() {
+                const color = this.dataset.color || this.style.backgroundColor || '#ffffff';
+                const targetInput = this.closest('.office-color-cluster')?.querySelector('input[type="color"]');
+                if (targetInput) {
+                    targetInput.value = color;
+                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                const menu = this.closest('.toolbar-dropdown');
+                if (menu) menu.classList.remove('open');
+            });
         });
         
         // Setup Drag & Drop for all upload zones
@@ -1194,10 +1491,6 @@
         
         document.getElementById('template_file_input').addEventListener('change', function() {
             if(this.files.length) document.getElementById('tpl_upload_form').submit();
-        });
-        
-        document.getElementById('sys_attach_input').addEventListener('change', function() {
-            onAttachFileChange(this);
         });
         
         document.getElementById('csv_file').addEventListener('change', async function(e) {
@@ -1457,37 +1750,58 @@
 
     // G. PLACEHOLDER INSERT & APPLY
     function insertField(tag) {
-        if (isPreviewMode) return;
-        
-        Swal.fire({
-            title: 'Insert Placeholder',
-            text: `Insert ${tag} into the proposal?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#2563eb',
-            cancelButtonColor: '#e2e8f0',
-            confirmButtonText: 'Yes, insert',
-            cancelButtonText: '<span style="color:#475569">Cancel</span>'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                if (lastFocusedField === 'subject') {
-                    const el = document.getElementById('email_subject');
-                    el.setRangeText(tag, subjectCaret, subjectCaret, 'end');
-                    subjectCaret = el.selectionStart;
-                    el.dispatchEvent(new Event('input'));
-                } else {
-                    let html = `<span style="background-color:#fef08a; padding:2px 4px; border:1px dashed #eab308; border-radius:2px;">${tag}</span>`;
-                    restoreCursorAndInsert(html);
-                }
+        if (isPreviewMode || !tag) return;
+
+        const doInsert = () => {
+            const canvas = document.getElementById('proposal_canvas');
+            if (!canvas) return;
+
+            if (lastFocusedField === 'subject') {
+                const el = document.getElementById('email_subject');
+                if (!el) return;
+                el.focus();
+                el.setRangeText(tag, subjectCaret, subjectCaret, 'end');
+                subjectCaret = el.selectionStart;
+                el.dispatchEvent(new Event('input'));
+                return;
             }
-        });
+
+            if (document.activeElement !== canvas) {
+                canvas.focus();
+            }
+            saveCursor();
+            restoreCursor();
+            let html = `<span style="background-color:#fef08a; padding:2px 4px; border:1px dashed #eab308; border-radius:2px;">${tag}</span>`;
+            restoreCursorAndInsert(html);
+        };
+
+        if (typeof Swal !== 'undefined' && Swal.fire) {
+            Swal.fire({
+                title: 'Insert Placeholder',
+                text: `Insert ${tag} into the proposal?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#e2e8f0',
+                confirmButtonText: 'Yes, insert',
+                cancelButtonText: '<span style="color:#475569">Cancel</span>'
+            }).then((result) => {
+                if (result.isConfirmed) doInsert();
+            });
+            return;
+        }
+
+        doInsert();
+    }
+
+    function getAllStudioFieldKeys() {
+        return Array.from(new Set(getCurrentPersistFields()));
     }
 
     function liveApplyAll() {
         if (!tokenBase) return;
         let html = tokenBase;
-        const fields = ['Hotel_Name', 'Address', 'City', 'State', 'Zip', 'Rooms', 'Extra','Email', 'Hotel_Number', 'Contact_Person', 'First_Name', 'Service_Provider', 'offeredProgramming', 'System', 'Bill', 'Upfront'];
-        fields.forEach(key => {
+        getAllStudioFieldKeys().forEach(key => {
             let el = document.getElementById('p_' + key);
             if (el && el.value !== '') {
                 let val = el.value;
@@ -1506,8 +1820,7 @@
 
     function updateSubjectPreview() {
         let subject = document.getElementById('email_subject').value;
-        const fields = ['Hotel_Name', 'Address', 'City', 'State', 'Zip', 'Rooms', 'Extra', 'Email','Hotel_Number', 'Contact_Person', 'First_Name', 'Service_Provider', 'offeredProgramming', 'System', 'Bill', 'Upfront'];
-        fields.forEach(key => {
+        getAllStudioFieldKeys().forEach(key => {
             let el = document.getElementById('p_' + key);
             if (el) {
                 let val = el.value;
@@ -1634,7 +1947,7 @@
     /** Count {{token}} occurrences in tokenBase and update sidebar badges */
     function updatePlaceholderCounts() {
         const src = tokenBase || '';
-        PERSIST_FIELDS.forEach(key => {
+        getCurrentPersistFields().forEach(key => {
             const badge = document.getElementById('ph_cnt_' + key);
             if (!badge) return;
             const matches = src.match(new RegExp('\\{\\{' + key + '\\}\\}', 'gi'));
@@ -1695,7 +2008,7 @@
         // so that liveApplyAll() can still find and replace them later.
         if (phViewMode === 'values') {
             let tb = this.innerHTML;
-            const fields = ['Hotel_Name','Address','City','State','Zip','Rooms','Extra','Email','Hotel_Number','Contact_Person','First_Name','Service_Provider','offeredProgramming','System','Bill','Upfront'];
+            const fields = ['Hotel_Name','Address','City','State','Zip','Rooms','Email','Hotel_Number','Contact_Person','First_Name','Service_Provider','offeredProgramming','System','Bill','Upfront'];
             fields.forEach(key => {
                 const el = document.getElementById('p_' + key);
                 if (!el || !el.value) return;
@@ -1840,7 +2153,7 @@
         let subject = document.getElementById('email_subject').value;
         let emailVal = '';
         
-        const fields = ['Hotel_Name', 'Address', 'City', 'State', 'Zip', 'Rooms', 'Extra', 'Email','Hotel_Number', 'Contact_Person', 'First_Name', 'Service_Provider', 'offeredProgramming', 'System', 'Bill', 'Upfront'];
+        const fields = ['Hotel_Name', 'Address', 'City', 'State', 'Zip', 'Rooms', 'Email','Hotel_Number', 'Contact_Person', 'First_Name', 'Service_Provider', 'offeredProgramming', 'System', 'Bill', 'Upfront'];
         
         fields.forEach(key => {
             let el = document.getElementById('p_' + key);
@@ -2144,7 +2457,26 @@
     }
 
     document.getElementById('proposal_canvas').addEventListener('contextmenu', (e) => {
+        const table = e.target.closest ? e.target.closest('table') : null;
+        if (table) {
+            e.preventDefault();
+            setTableContextMenu(table, e.clientX, e.clientY);
+            return;
+        }
+        const target = e.target.closest ? e.target.closest('img, a[data-pdf-url]') : null;
+        if (!target) return;
+
         e.preventDefault();
+        if (target.tagName === 'IMG') {
+            selectImage(target);
+            showCtxMenu(e.clientX, e.clientY);
+            return;
+        }
+
+        if (target.hasAttribute('data-pdf-url')) {
+            selectedPdfBtn = target;
+            showCtxMenuPdf(e.clientX, e.clientY);
+        }
     });
 
     function ctxReplaceImage() {
@@ -2393,13 +2725,21 @@
     function execCmd(cmd, val = null) {
         if (isPreviewMode) return;
         const canvas = document.getElementById('proposal_canvas');
+        if (!canvas) return;
+        saveCursor();
         canvas.focus();
-        if (lastRange) {
-            const sel = window.getSelection();
+        const sel = window.getSelection();
+        if (lastRange && sel && sel.rangeCount === 0) {
             sel.removeAllRanges();
             sel.addRange(lastRange);
         }
         document.execCommand(cmd, false, val);
+        saveCursor();
+        updateStatusBar();
+    }
+
+    function applyFontFamily(fontName) {
+        execCmd('fontName', fontName);
     }
 
     function applyFontSize(v) {
@@ -2412,21 +2752,48 @@
 
     document.getElementById('proposal_canvas').addEventListener('keyup', saveCursor);
     document.getElementById('proposal_canvas').addEventListener('mouseup', saveCursor);
+    document.getElementById('proposal_canvas').addEventListener('touchend', saveCursor);
+    document.addEventListener('selectionchange', saveCursor);
 
-    function saveCursor() {
-        let sel = window.getSelection();
-        if (sel.getRangeAt && sel.rangeCount > 0) {
-            lastRange = sel.getRangeAt(0).cloneRange();
+    function isCanvasRange(range) {
+        const canvas = document.getElementById('proposal_canvas');
+        if (!canvas || !range) return false;
+        try {
+            return canvas.contains(range.commonAncestorContainer) || 
+                   canvas.contains(range.startContainer) ||
+                   canvas.contains(range.endContainer);
+        } catch (_) {
+            return false;
         }
     }
 
+    function saveCursor() {
+        const canvas = document.getElementById('proposal_canvas');
+        if (!canvas) return;
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+        
+        try {
+            const range = sel.getRangeAt(0);
+            if (isCanvasRange(range)) {
+                lastRange = range.cloneRange();
+            }
+        } catch (_) {}
+    }
+
     function restoreCursor() {
-        document.getElementById('proposal_canvas').focus();
-        if (lastRange) {
-            let sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(lastRange);
+        const canvas = document.getElementById('proposal_canvas');
+        if (!canvas) return false;
+        canvas.focus();
+        if (lastRange && isCanvasRange(lastRange)) {
+            try {
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(lastRange);
+                return true;
+            } catch (_) {}
         }
+        return false;
     }
 
     function restoreCursorAndInsert(html) {
@@ -2437,22 +2804,40 @@
     // N. INSERT HTML AT CURSOR
     function insertHtmlAtCursor(html) {
         const canvas = document.getElementById('proposal_canvas');
+        if (!canvas) return;
         canvas.focus();
+
         let sel = window.getSelection();
-        if (!sel || !canvas.contains(sel.anchorNode) && !canvas.contains(sel.focusNode)) {
-            const range = document.createRange();
+        let range = null;
+
+        // 1. Prioritize active range if it's currently inside the canvas
+        if (sel && sel.rangeCount > 0 && isCanvasRange(sel.getRangeAt(0))) {
+            range = sel.getRangeAt(0);
+        } 
+        // 2. Otherwise restore last saved cursor position inside canvas
+        else if (lastRange && isCanvasRange(lastRange)) {
+            try {
+                sel.removeAllRanges();
+                sel.addRange(lastRange);
+                range = lastRange;
+            } catch (_) {}
+        }
+
+        // 3. Fallback only if no cursor was ever placed inside canvas
+        if (!range || !isCanvasRange(range)) {
+            range = document.createRange();
             range.selectNodeContents(canvas);
             range.collapse(false);
             sel.removeAllRanges();
             sel.addRange(range);
         }
-        if (sel && sel.getRangeAt && sel.rangeCount) {
-            let range = sel.getRangeAt(0);
+
+        if (range) {
             range.deleteContents();
             let el = document.createElement('div');
             el.innerHTML = html;
             let frag = document.createDocumentFragment(), node, lastNode;
-            while ( (node = el.firstChild) ) {
+            while ((node = el.firstChild)) {
                 lastNode = frag.appendChild(node);
             }
             range.insertNode(frag);
@@ -2462,6 +2847,7 @@
                 range.collapse(true);
                 sel.removeAllRanges();
                 sel.addRange(range);
+                lastRange = range.cloneRange();
             }
         } else {
             canvas.innerHTML += html;
@@ -2473,7 +2859,7 @@
         // Sync tokenBase after inserting new content
         if (phViewMode === 'values') {
             let tb = canvas.innerHTML;
-            const fields = ['Hotel_Name','Address','City','State','Zip','Rooms','Extra','Email','Hotel_Number','Contact_Person','First_Name','Service_Provider','offeredProgramming','System','Bill','Upfront'];
+            const fields = ['Hotel_Name','Address','City','State','Zip','Rooms','Email','Hotel_Number','Contact_Person','First_Name','Service_Provider','offeredProgramming','System','Bill','Upfront'];
             fields.forEach(key => {
                 const el = document.getElementById('p_' + key);
                 if (!el || !el.value) return;
@@ -2498,15 +2884,121 @@
         _lastSnapshot = canvas.innerHTML;
     }
 
-    // O. INSERT COMPONENTS
+    function setTableContextMenu(table, x, y) {
+        const menu = document.getElementById('table-context-menu');
+        if (!menu) return;
+        menu.dataset.tableId = table.dataset.tableId || 'table-' + Date.now();
+        table.dataset.tableId = menu.dataset.tableId;
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        menu.style.display = 'block';
+    }
+
+    function hideTableContextMenu() {
+        const menu = document.getElementById('table-context-menu');
+        if (menu) menu.style.display = 'none';
+    }
+
+    document.addEventListener('click', hideTableContextMenu);
+    document.addEventListener('contextmenu', function(e) {
+        if (!e.target.closest('#table-context-menu')) {
+            hideTableContextMenu();
+        }
+    });
+
+    function getActiveTableMenuTarget() {
+        const menu = document.getElementById('table-context-menu');
+        return menu?.dataset.tableId ? document.querySelector('table[data-table-id="' + menu.dataset.tableId + '"]') : null;
+    }
+
+    function insertTableRow(position) {
+        const table = getActiveTableMenuTarget();
+        if (!table) return;
+        const tbody = table.querySelector('tbody') || table;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const newRow = document.createElement('tr');
+        const cols = Math.max(2, table.rows[0]?.cells.length || 2);
+        for (let i = 0; i < cols; i++) {
+            const cell = document.createElement('td');
+            cell.textContent = '';
+            cell.style.padding = '8px';
+            cell.style.border = '1px solid #cbd5e1';
+            newRow.appendChild(cell);
+        }
+        if (position === 'above') {
+            const targetRow = rows[0] || null;
+            if (targetRow) tbody.insertBefore(newRow, targetRow); else tbody.appendChild(newRow);
+        } else {
+            if (rows.length) tbody.appendChild(newRow); else tbody.appendChild(newRow);
+        }
+        hideTableContextMenu();
+    }
+
+    function insertTableColumn(position) {
+        const table = getActiveTableMenuTarget();
+        if (!table) return;
+        const rows = Array.from(table.querySelectorAll('tr'));
+        rows.forEach((row) => {
+            const cell = document.createElement(position === 'left' ? 'td' : 'td');
+            cell.textContent = '';
+            cell.style.padding = '8px';
+            cell.style.border = '1px solid #cbd5e1';
+            if (position === 'left') row.insertBefore(cell, row.firstChild); else row.appendChild(cell);
+        });
+        hideTableContextMenu();
+    }
+
+    function deleteTableSelection() {
+        const table = getActiveTableMenuTarget();
+        if (!table) return;
+        table.querySelectorAll('.table-cell-selected').forEach(cell => {
+            const row = cell.parentElement;
+            if (row && row.children.length > 1) cell.remove();
+        });
+        hideTableContextMenu();
+    }
+
+    function mergeSelectedCells() {
+        const table = getActiveTableMenuTarget();
+        if (!table) return;
+        const selected = Array.from(table.querySelectorAll('.table-cell-selected'));
+        if (selected.length <= 1) return;
+        const first = selected[0];
+        const row = first.parentElement;
+        let colSpan = 1;
+        let rowSpan = 1;
+        selected.forEach(cell => {
+            if (cell !== first) {
+                colSpan += cell.colSpan || 1;
+                rowSpan += cell.rowSpan || 1;
+                cell.remove();
+            }
+        });
+        first.colSpan = colSpan;
+        first.rowSpan = rowSpan;
+        first.setAttribute('colspan', colSpan);
+        first.setAttribute('rowspan', rowSpan);
+        first.classList.remove('table-cell-selected');
+        hideTableContextMenu();
+    }
 
     function insertTableComponent() {
         if (isPreviewMode) return;
         let html = `<table width="100%" border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse; border:1px solid #cbd5e1; margin:16px 0;">
-            <thead><tr style="background-color:#f1f5f9;"><th>Header 1</th><th>Header 2</th></tr></thead>
-            <tbody><tr><td>Data 1</td><td>Data 2</td></tr></tbody>
+            <thead><tr style="background-color:#f1f5f9;"><th style="padding:8px;border:1px solid #cbd5e1;">Header 1</th><th style="padding:8px;border:1px solid #cbd5e1;">Header 2</th></tr></thead>
+            <tbody><tr><td style="padding:8px;border:1px solid #cbd5e1;">Data 1</td><td style="padding:8px;border:1px solid #cbd5e1;">Data 2</td></tr></tbody>
         </table>`;
         insertHtmlAtCursor(html);
+        const table = document.querySelector('#proposal_canvas table:last-child');
+        if (table) {
+            table.addEventListener('click', function(e) {
+                const cell = e.target.closest('th, td');
+                if (cell) {
+                    table.querySelectorAll('th, td').forEach(node => node.classList.remove('table-cell-selected'));
+                    cell.classList.add('table-cell-selected');
+                }
+            });
+        }
     }
 
     function insertDividerComponent() {
@@ -3208,7 +3700,7 @@
         }, 350);
     }
 
-    // Attach live Track ID check to property inputs
+    // Track ID is system-generated and is not shown during email composition.
     document.addEventListener('DOMContentLoaded', () => {
         ['p_Service_Provider', 'p_Address'].forEach(id => {
             const el = document.getElementById(id);
@@ -3217,7 +3709,6 @@
                 el.addEventListener('change', checkCurrentTrackId);
             }
         });
-        checkCurrentTrackId();
     });
 
     // Q. SINGLE SEND / DRAFT
@@ -3363,7 +3854,7 @@
         formData.append('email_subject', document.getElementById('subject_preview_text').innerText.trim() || document.getElementById('email_subject').value);
 
         // Serialize all studio inputs
-        const fields = ['Hotel_Name', 'Address', 'City', 'State', 'Zip', 'Rooms', 'Extra', 'Email', 'Hotel_Number', 'Contact_Person', 'First_Name', 'Service_Provider', 'offeredProgramming', 'System', 'Bill', 'Upfront'];
+        const fields = ['Hotel_Name', 'Address', 'City', 'State', 'Zip', 'Rooms', 'Email', 'Hotel_Number', 'Contact_Person', 'First_Name', 'Service_Provider', 'offeredProgramming', 'System', 'Bill', 'Upfront'];
         let studioFieldsVal = {};
         fields.forEach(key => {
             const el = document.getElementById('p_' + key);
@@ -3435,7 +3926,7 @@
     }
 
     function normalizeCanvasForTemplateSave(mode = 'values') {
-        const fields = ['Hotel_Name', 'Address', 'City', 'State', 'Zip', 'Rooms', 'Extra', 'Email', 'Hotel_Number', 'Contact_Person', 'First_Name', 'Service_Provider', 'offeredProgramming', 'System', 'Bill', 'Upfront'];
+        const fields = ['Hotel_Name', 'Address', 'City', 'State', 'Zip', 'Rooms', 'Email', 'Hotel_Number', 'Contact_Person', 'First_Name', 'Service_Provider', 'offeredProgramming', 'System', 'Bill', 'Upfront'];
         const subject = document.getElementById('email_subject').value || '';
 
         let htmlContent = document.getElementById('proposal_canvas').innerHTML;
@@ -3503,28 +3994,39 @@
         formData.append('save_mode', resolvedMode);
 
         let statusEl = document.getElementById('save_tpl_status');
-        statusEl.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
-        statusEl.innerText = "Saving...";
-        statusEl.classList.add('bg-blue-100', 'text-blue-700');
-        statusEl.style.display = 'block';
+        if (statusEl) {
+            statusEl.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
+            statusEl.innerText = "Saving...";
+            statusEl.classList.add('bg-blue-100', 'text-blue-700');
+            statusEl.style.display = 'block';
+        }
 
         try {
             let response = await fetch('', { method: 'POST', body: formData });
             const payload = await response.json().catch(() => ({}));
-            statusEl.classList.remove('bg-blue-100', 'text-blue-700');
+            if (statusEl) statusEl.classList.remove('bg-blue-100', 'text-blue-700');
             if (response.ok && payload.status === 'success') {
-                statusEl.innerText = payload.message || 'Template saved!';
-                statusEl.classList.add('bg-green-100', 'text-green-700');
+                if (statusEl) {
+                    statusEl.innerText = payload.message || 'Template saved!';
+                    statusEl.classList.add('bg-green-100', 'text-green-700');
+                }
+                showToast('Template saved successfully!', 'success');
                 document.getElementById('sb_unsaved').style.display = 'none';
                 setTimeout(() => window.location.reload(), 1500);
             } else {
-                statusEl.innerText = payload.message || 'Error saving template.';
-                statusEl.classList.add('bg-red-100', 'text-red-700');
+                if (statusEl) {
+                    statusEl.innerText = payload.message || 'Error saving template.';
+                    statusEl.classList.add('bg-red-100', 'text-red-700');
+                }
+                showToast(payload.message || 'Error saving template.', 'error');
             }
         } catch (err) {
-            statusEl.classList.remove('bg-blue-100', 'text-blue-700');
-            statusEl.innerText = "Network Error.";
-            statusEl.classList.add('bg-red-100', 'text-red-700');
+            if (statusEl) {
+                statusEl.classList.remove('bg-blue-100', 'text-blue-700');
+                statusEl.innerText = "Network Error.";
+                statusEl.classList.add('bg-red-100', 'text-red-700');
+            }
+            showToast('Network error saving template.', 'error');
         }
     }
 
@@ -3644,60 +4146,247 @@
     let pdfGallery = [];
     let pdfGalleryVisibleCount = 0;
     let pdfGalleryPageSize = 40;
+    let pdfGallerySearchQuery = '';
     let pendingCldPdfFile = null;
     let selectedAttachmentFiles = [];
     let pdfLibraryAction = ''; // 'attach' or 'link'
     let activeDropdown = null;
+    let currentPreviewObjectUrl = null;
+
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function getFileIcon(name = '', type = '') {
+        const ext = name.split('.').pop().toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext) || (type && type.startsWith('image/'))) return '🖼️';
+        if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma'].includes(ext) || (type && type.startsWith('audio/'))) return '🎵';
+        if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'].includes(ext) || (type && type.startsWith('video/'))) return '🎬';
+        if (ext === 'pdf' || type === 'application/pdf') return '📕';
+        if (['doc', 'docx', 'rtf', 'odt'].includes(ext)) return '📝';
+        if (['xls', 'xlsx', 'csv', 'tsv', 'ods'].includes(ext)) return '📊';
+        if (['ppt', 'pptx', 'odp'].includes(ext)) return '📑';
+        if (['txt', 'log', 'json', 'xml', 'html', 'css', 'js', 'md', 'sql', 'env', 'ini', 'yaml', 'yml'].includes(ext) || (type && type.startsWith('text/'))) return '📄';
+        if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(ext)) return '📦';
+        return '📎';
+    }
+
+    function closeAttachmentPreviewModal() {
+        const modal = document.getElementById('attachment-preview-modal');
+        if (modal) modal.style.display = 'none';
+        const body = document.getElementById('att_preview_body');
+        if (body) body.innerHTML = '';
+        if (currentPreviewObjectUrl) {
+            try { URL.revokeObjectURL(currentPreviewObjectUrl); } catch(_) {}
+            currentPreviewObjectUrl = null;
+        }
+    }
+
+    document.getElementById('attachment-preview-modal')?.addEventListener('click', e => {
+        if (e.target.id === 'attachment-preview-modal') closeAttachmentPreviewModal();
+    });
+
+    async function previewAttachment(index) {
+        const file = selectedAttachmentFiles[index];
+        if (!file) return;
+
+        const modal = document.getElementById('attachment-preview-modal');
+        const iconEl = document.getElementById('att_preview_icon');
+        const titleEl = document.getElementById('att_preview_title');
+        const metaEl = document.getElementById('att_preview_meta');
+        const dlBtn = document.getElementById('att_preview_download_btn');
+        const body = document.getElementById('att_preview_body');
+
+        if (!modal || !body) return;
+
+        if (currentPreviewObjectUrl) {
+            try { URL.revokeObjectURL(currentPreviewObjectUrl); } catch(_) {}
+            currentPreviewObjectUrl = null;
+        }
+
+        const ext = file.name.split('.').pop().toLowerCase();
+        const icon = getFileIcon(file.name, file.type);
+        const sizeStr = formatFileSize(file.size);
+        const objUrl = URL.createObjectURL(file);
+        currentPreviewObjectUrl = objUrl;
+
+        iconEl.textContent = icon;
+        titleEl.textContent = file.name;
+        titleEl.title = file.name;
+        metaEl.textContent = `${sizeStr} • ${file.type || ext.toUpperCase() + ' file'}`;
+
+        dlBtn.href = objUrl;
+        dlBtn.download = file.name;
+
+        body.innerHTML = '<div style="text-align:center;padding:40px;color:#64748b;font-size:0.85rem;">⏳ Loading preview...</div>';
+        modal.style.display = 'flex';
+
+        // 1. Image
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext) || (file.type && file.type.startsWith('image/'))) {
+            body.innerHTML = `
+                <div style="display:flex;justify-content:center;align-items:center;padding:12px;width:100%;height:100%;box-sizing:border-box;">
+                    <img src="${objUrl}" alt="${escapeHtml(file.name)}" style="max-width:100%;max-height:65vh;object-fit:contain;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.15);background:#fff;">
+                </div>
+            `;
+            return;
+        }
+
+        // 2. PDF
+        if (ext === 'pdf' || file.type === 'application/pdf') {
+            body.innerHTML = `
+                <div style="width:100%;height:68vh;display:flex;flex-direction:column;">
+                    <iframe src="${objUrl}" style="width:100%;height:100%;border:none;border-radius:8px;box-shadow:inset 0 0 4px rgba(0,0,0,0.1);background:#fff;"></iframe>
+                </div>
+            `;
+            return;
+        }
+
+        // 3. Audio
+        if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma'].includes(ext) || (file.type && file.type.startsWith('audio/'))) {
+            body.innerHTML = `
+                <div style="max-width:440px;margin:30px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.06);">
+                    <div style="font-size:3.5rem;margin-bottom:12px;">🎵</div>
+                    <div style="font-weight:700;color:#1e293b;font-size:0.95rem;margin-bottom:4px;word-break:break-word;">${escapeHtml(file.name)}</div>
+                    <div style="color:#64748b;font-size:0.75rem;margin-bottom:20px;">${sizeStr}</div>
+                    <audio controls autoplay src="${objUrl}" style="width:100%;outline:none;border-radius:6px;"></audio>
+                </div>
+            `;
+            return;
+        }
+
+        // 4. Video
+        if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'].includes(ext) || (file.type && file.type.startsWith('video/'))) {
+            body.innerHTML = `
+                <div style="display:flex;justify-content:center;align-items:center;background:#0f172a;border-radius:10px;padding:12px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,0.3);">
+                    <video controls autoplay src="${objUrl}" style="max-width:100%;max-height:65vh;border-radius:6px;outline:none;"></video>
+                </div>
+            `;
+            return;
+        }
+
+        // 5. DOCX
+        if (ext === 'docx') {
+            if (typeof mammoth !== 'undefined' && mammoth.convertToHtml) {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+                    body.innerHTML = `
+                        <div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:28px 36px;max-height:68vh;overflow-y:auto;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;line-height:1.6;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);" class="scroller">
+                            ${result.value || '<p style="color:#94a3b8;font-style:italic;">Document is empty.</p>'}
+                        </div>
+                    `;
+                    return;
+                } catch (docxErr) {
+                    console.warn('Mammoth preview error:', docxErr);
+                }
+            }
+        }
+
+        // 6. Text / Code / CSV / JSON
+        if (['txt', 'csv', 'tsv', 'json', 'xml', 'html', 'css', 'js', 'md', 'log', 'sql', 'env', 'ini', 'yaml', 'yml'].includes(ext) || (file.type && file.type.startsWith('text/'))) {
+            try {
+                const text = await file.text();
+                const previewText = text.length > 200000 ? text.slice(0, 200000) + '\n\n[... Truncated for display ...]' : text;
+                body.innerHTML = `
+                    <div style="display:flex;flex-direction:column;height:68vh;">
+                        <pre class="scroller" style="flex:1;background:#0f172a;color:#f1f5f9;padding:16px 20px;border-radius:8px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:0.75rem;line-height:1.5;white-space:pre-wrap;word-break:break-word;margin:0;box-sizing:border-box;">${escapeHtml(previewText)}</pre>
+                    </div>
+                `;
+                return;
+            } catch (txtErr) {
+                console.warn('Text preview error:', txtErr);
+            }
+        }
+
+        // 7. Generic document fallback (DOC, XLSX, PPTX, ZIP, etc.)
+        body.innerHTML = `
+            <div style="max-width:440px;margin:30px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:28px 24px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.06);">
+                <div style="font-size:3.5rem;margin-bottom:12px;">${icon}</div>
+                <div style="font-weight:700;color:#1e293b;font-size:0.95rem;margin-bottom:4px;word-break:break-word;">${escapeHtml(file.name)}</div>
+                <div style="color:#64748b;font-size:0.75rem;margin-bottom:16px;">${sizeStr} • ${file.type || ext.toUpperCase() + ' file'}</div>
+                <div style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:8px 12px;font-size:0.75rem;margin-bottom:20px;line-height:1.4;">
+                    Direct in-browser visual rendering is not supported for this format. You can download or open it using your desktop application.
+                </div>
+                <a href="${objUrl}" download="${escapeHtml(file.name)}" style="display:inline-flex;align-items:center;gap:6px;background:#2563eb;color:#fff;padding:8px 18px;border-radius:6px;font-size:0.8rem;font-weight:700;text-decoration:none;box-shadow:0 2px 6px rgba(37,99,235,0.3);">
+                    <span>⬇</span> <span>Download / Open with Default App</span>
+                </a>
+            </div>
+        `;
+    }
 
     function toggleAttachDropdown(e) {
-        e.stopPropagation();
-        if (activeDropdown && activeDropdown !== 'attach') closeAllDropdowns();
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         const dd = document.getElementById('attach_dropdown');
-        if (dd.classList.contains('hidden')) {
-            dd.classList.remove('hidden');
+        if (!dd) return;
+        const isOpen = dd.classList.contains('open');
+        closeAllDropdowns();
+        if (!isOpen) {
+            dd.classList.add('open');
             activeDropdown = 'attach';
-        } else {
-            dd.classList.add('hidden');
-            activeDropdown = null;
         }
     }
 
     function togglePdfLinkDropdown(e) {
-        e.stopPropagation();
-        if (activeDropdown && activeDropdown !== 'link') closeAllDropdowns();
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         const dd = document.getElementById('pdf_link_dropdown');
-        if (dd.classList.contains('hidden')) {
-            dd.classList.remove('hidden');
+        if (!dd) return;
+        const isOpen = dd.classList.contains('open');
+        closeAllDropdowns();
+        if (!isOpen) {
+            dd.classList.add('open');
             activeDropdown = 'link';
-        } else {
-            dd.classList.add('hidden');
-            activeDropdown = null;
         }
     }
 
     function closeAllDropdowns() {
-        document.getElementById('attach_dropdown')?.classList.add('hidden');
-        document.getElementById('pdf_link_dropdown')?.classList.add('hidden');
+        document.querySelectorAll('.toolbar-dropdown').forEach(d => d.classList.remove('open'));
         activeDropdown = null;
     }
-    
-    document.addEventListener('click', () => closeAllDropdowns());
 
-    function attachFromLibrary() {
+    function attachFromLibrary(e) {
+        if (e) e.stopPropagation();
         closeAllDropdowns();
         openPdfLibraryModal('attach');
     }
 
-    function insertPdfLinkFromLibrary() {
+    function chooseLocalAttachment(e) {
+        if (e) e.stopPropagation();
+        closeAllDropdowns();
+        const input = document.getElementById('sys_attach_input');
+        if (input) input.click();
+    }
+
+    function insertPdfLinkFromLibrary(e) {
+        if (e) e.stopPropagation();
         closeAllDropdowns();
         openPdfLibraryModal('link');
     }
 
+    function chooseUploadPdf(e) {
+        if (e) e.stopPropagation();
+        closeAllDropdowns();
+        const input = document.getElementById('cld_pdf_input');
+        if (input) input.click();
+    }
+
     function openPdfLibraryModal(action) {
         pdfLibraryAction = action;
+        pdfGallerySearchQuery = '';
+        const searchInput = document.getElementById('pdf_search_input');
+        if (searchInput) searchInput.value = '';
         const modal = document.getElementById('pdf-library-modal');
         if (modal) {
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
             loadPdfGalleryFromDb();
         }
     }
@@ -3712,7 +4401,10 @@
     });
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closePdfLibraryModal();
+        if (event.key === 'Escape') {
+            closePdfLibraryModal();
+            closeAttachmentPreviewModal();
+        }
     });
 
     // ── ATTACHMENT LOGIC ──
@@ -3746,50 +4438,64 @@
         const container = document.getElementById('selected-attachments');
         if (!container) return;
         container.innerHTML = '';
+        
+        const labelEl = document.getElementById('attachment_label_text');
         if (selectedAttachmentFiles.length === 0) {
-            container.innerHTML = '<div style="font-size:0.72rem;color:#94a3b8;padding:8px 0;">No attachments selected yet.</div>';
-            document.getElementById('attachment_label_text').textContent = 'Attach';
+            container.innerHTML = '<div style="font-size:0.72rem;color:#94a3b8;padding:8px 0;text-align:center;">No attachments selected yet.</div>';
+            if (labelEl) labelEl.textContent = 'Attach';
             return;
         }
 
+        if (labelEl) labelEl.textContent = `Attach (${selectedAttachmentFiles.length})`;
+
         selectedAttachmentFiles.forEach((file, index) => {
             const row = document.createElement('div');
-            row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;padding:6px 10px;border-radius:6px;font-size:0.75rem;color:#334155;';
+            row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;padding:6px 10px;border-radius:6px;font-size:0.75rem;color:#334155;gap:6px;';
             
-            const nameSpan = document.createElement('span');
-            nameSpan.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%;';
-            nameSpan.textContent = file.name;
+            const leftDiv = document.createElement('div');
+            leftDiv.style.cssText = 'display:flex;align-items:center;gap:6px;overflow:hidden;flex:1;min-width:0;';
+            
+            const icon = getFileIcon(file.name, file.type);
+            const sizeStr = formatFileSize(file.size);
+            
+            leftDiv.innerHTML = `<span style="font-size:1rem;flex-shrink:0;">${icon}</span>
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+                <span style="font-size:0.65rem;color:#94a3b8;flex-shrink:0;">(${sizeStr})</span>`;
             
             const actions = document.createElement('div');
-            actions.style.cssText = 'display:flex;gap:8px;align-items:center;';
+            actions.style.cssText = 'display:flex;gap:4px;align-items:center;flex-shrink:0;';
             
-            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                const viewBtn = document.createElement('button');
-                viewBtn.innerHTML = '👁️ <span style="text-decoration:underline;">View</span>';
-                viewBtn.style.cssText = 'background:none;border:none;color:#1d4ed8;cursor:pointer;font-size:0.75rem;font-weight:600;padding:0;';
-                viewBtn.onclick = () => {
-                    const objUrl = URL.createObjectURL(file);
-                    window.open(objUrl, '_blank');
-                    setTimeout(() => URL.revokeObjectURL(objUrl), 60000); 
-                };
-                actions.appendChild(viewBtn);
-            }
+            const previewBtn = document.createElement('button');
+            previewBtn.type = 'button';
+            previewBtn.innerHTML = '👁️ <span style="text-decoration:underline;">Preview</span>';
+            previewBtn.title = 'Preview this attachment';
+            previewBtn.style.cssText = 'background:none;border:none;color:#1d4ed8;cursor:pointer;font-size:0.72rem;font-weight:600;padding:2px 4px;border-radius:4px;';
+            previewBtn.onmouseover = () => { previewBtn.style.background = '#dbeafe'; };
+            previewBtn.onmouseout = () => { previewBtn.style.background = 'none'; };
+            previewBtn.onclick = (e) => {
+                e.stopPropagation();
+                previewAttachment(index);
+            };
+            actions.appendChild(previewBtn);
             
             const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
             removeBtn.innerHTML = '✕';
-            removeBtn.style.cssText = 'background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.9rem;line-height:1;margin-left:4px;';
-            removeBtn.onclick = () => {
+            removeBtn.title = 'Remove attachment';
+            removeBtn.style.cssText = 'background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;line-height:1;padding:2px 6px;border-radius:4px;';
+            removeBtn.onmouseover = () => { removeBtn.style.background = '#fee2e2'; };
+            removeBtn.onmouseout = () => { removeBtn.style.background = 'none'; };
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
                 selectedAttachmentFiles.splice(index, 1);
                 renderAttachmentList();
             };
-            
             actions.appendChild(removeBtn);
-            row.appendChild(nameSpan);
+            
+            row.appendChild(leftDiv);
             row.appendChild(actions);
             container.appendChild(row);
         });
-        
-        document.getElementById('attachment_label_text').textContent = `Attach (${selectedAttachmentFiles.length})`;
     }
 
     // ── PDF LINK BUTTON INSERT LOGIC ──
@@ -3949,6 +4655,13 @@
     }
 
     let _pdfGalleryLoaded = false;
+
+    function filterPdfGallery(q) {
+        pdfGallerySearchQuery = (q || '').trim().toLowerCase();
+        pdfGalleryVisibleCount = pdfGalleryPageSize;
+        renderPdfGallery();
+    }
+
     function loadPdfGalleryFromDb() {
         const container = document.getElementById('pdf-gallery');
         if (!container) return;
@@ -3970,14 +4683,24 @@
         const more = document.getElementById('pdf-gallery-more');
         if (!container) return;
         container.innerHTML = '';
-        if (!pdfGallery.length) {
+        
+        let filtered = pdfGallery;
+        if (pdfGallerySearchQuery) {
+            filtered = pdfGallery.filter(p => 
+                (p.name || '').toLowerCase().includes(pdfGallerySearchQuery) || 
+                (p.url || '').toLowerCase().includes(pdfGallerySearchQuery)
+            );
+        }
+
+        if (!filtered.length) {
             empty.style.display = 'block';
+            empty.textContent = pdfGallerySearchQuery ? `No Tracked PDFs matching "${escapeHtml(pdfGallerySearchQuery)}".` : 'No Tracked PDFs found in library.';
             if (more) more.style.display = 'none';
             return;
         }
         empty.style.display = 'none';
         
-        pdfGallery.slice(0, pdfGalleryVisibleCount).forEach(p => {
+        filtered.slice(0, pdfGalleryVisibleCount).forEach(p => {
             const isPinned = p.is_pinned == 1;
             const row = document.createElement('div');
             row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:${isPinned ? '#eff6ff' : '#f8fafc'};border:1px solid ${isPinned ? '#93c5fd' : '#e2e8f0'};border-radius:10px;font-size:0.8rem;transition:all 0.15s;cursor:pointer;`;
@@ -4037,11 +4760,18 @@
             container.appendChild(row);
         });
         
-        if (more) more.style.display = (pdfGalleryVisibleCount < pdfGallery.length) ? 'block' : 'none';
+        if (more) more.style.display = (pdfGalleryVisibleCount < filtered.length) ? 'block' : 'none';
     }
 
     function loadMorePdfGallery() {
-        pdfGalleryVisibleCount = Math.min(pdfGallery.length, pdfGalleryVisibleCount + pdfGalleryPageSize);
+        let filtered = pdfGallery;
+        if (pdfGallerySearchQuery) {
+            filtered = pdfGallery.filter(p => 
+                (p.name || '').toLowerCase().includes(pdfGallerySearchQuery) || 
+                (p.url || '').toLowerCase().includes(pdfGallerySearchQuery)
+            );
+        }
+        pdfGalleryVisibleCount = Math.min(filtered.length, pdfGalleryVisibleCount + pdfGalleryPageSize);
         renderPdfGallery();
     }
 
@@ -4143,6 +4873,14 @@
     </div>
 
 <script>
+    function closeAddOptionPopup() {
+        const modal = document.getElementById('add_option_modal');
+        if (modal) modal.style.display = 'none';
+    }
+    function submitAddOption() {
+        closeAddOptionPopup();
+    }
+
     function escapeHtml(unsafe) {
         if (typeof unsafe !== 'string') return '';
         return unsafe
