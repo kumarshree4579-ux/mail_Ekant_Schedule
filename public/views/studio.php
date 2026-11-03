@@ -339,7 +339,7 @@
                         <input type="hidden" id="client_email" value="">
                     </div>
                     <div>
-                        <input type="text" id="email_subject" class="field-input" value="Dish Network Exclusive Discount Offer for {{Hotel_Name}} {{City}}, {{State}} {{Zip}}">
+                        <input type="text" id="email_subject" class="field-input" value="">
                         
                     </div>
                 </div>
@@ -980,7 +980,7 @@
 
     // B. PHP → JS TEMPLATE KEYS (content + subject loaded on demand)
     const rawTemplates = {};
-    const DEFAULT_TEMPLATE_SUBJECT = 'Dish Network Exclusive Discount Offer for {{Hotel_Name}} {{City}}, {{State}} {{Zip}}';
+    const DEFAULT_TEMPLATE_SUBJECT = '';
 
     function extractTemplateSubject(html) {
         const match = html.match(/<!--\s*EMAIL_SUBJECT:\s*([\s\S]*?)\s*-->/i);
@@ -3865,6 +3865,9 @@
                 }
             }
         });
+        if (selectedAttachmentFiles.length > 0) {
+            studioFieldsVal.attachment_names = selectedAttachmentFiles.map(f => f.name);
+        }
         formData.append('studio_fields', JSON.stringify(studioFieldsVal));
         formData.append('custom_id', customId);
         
@@ -5448,6 +5451,12 @@
                         el.dispatchEvent(new Event('input'));
                     }
                 }
+                if (fields.attachment_names && Array.isArray(fields.attachment_names) && fields.attachment_names.length > 0) {
+                    const container = document.getElementById('selected-attachments');
+                    if (container) {
+                        container.innerHTML = '<div style="font-size:0.72rem;color:#b45309;background:#fef3c7;border:1px solid #fde68a;padding:6px 10px;border-radius:6px;margin-bottom:4px;">📎 Past email attached: <b>' + fields.attachment_names.map(escapeHtml).join(', ') + '</b><br><small style="color:#92400e;">(Re-select files via "Attach" if you wish to re-attach them)</small></div>';
+                    }
+                }
             } catch(err) {}
         }
 
@@ -5466,7 +5475,42 @@
             let bodyContent = e.body;
             bodyContent = bodyContent.replace(/<img[^>]+src=["\'][^"\']*\/track\?tid=[^"\']*["\'][^>]*>/i, '');
             
+            // If body has the outer email table wrapper, unwrap it cleanly to inner proposal content
+            const innerMatch = bodyContent.match(/<td[^>]*style="[^"]*padding:\s*36px[^"]*"[^>]*>([\s\S]*?)<\/td>\s*<\/tr>\s*<\/table>\s*<\/td>\s*<\/tr>\s*<\/table>/i);
+            if (innerMatch && innerMatch[1]) {
+                bodyContent = innerMatch[1].trim();
+            } else {
+                bodyContent = bodyContent.replace(/<!DOCTYPE[\s\S]*?<body[^>]*>/i, '').replace(/<\/body>[\s\S]*?<\/html>/i, '').trim();
+            }
+            
             canvas.innerHTML = bodyContent;
+
+            // Restore data-pdf-url and data-pdf-name on any Tracked PDF links so they can be re-tracked with fresh links
+            canvas.querySelectorAll('a').forEach(a => {
+                const href = a.getAttribute('href') || '';
+                if (href.includes('Viewer/index.php') || href.includes('pdf-viewer') || a.hasAttribute('data-pdf-url')) {
+                    let pdfUrl = a.getAttribute('data-pdf-url') || '';
+                    if (!pdfUrl) {
+                        const m = href.match(/[?&]url=([^&"']+)/i);
+                        if (m) {
+                            try {
+                                pdfUrl = decodeURIComponent(m[1]);
+                            } catch (_) {
+                                pdfUrl = m[1];
+                            }
+                        }
+                    }
+                    if (pdfUrl) {
+                        a.setAttribute('data-pdf-url', pdfUrl);
+                        if (!a.getAttribute('data-pdf-name')) {
+                            const cleanText = a.textContent.trim().replace(/^[📄📑✨✅🚀📎\s]+/, '');
+                            a.setAttribute('data-pdf-name', cleanText || 'Proposal Document');
+                        }
+                    }
+                }
+            });
+
+            bodyContent = canvas.innerHTML;
             tokenBase = bodyContent;
             liveCanvasBase = bodyContent;
             _lastSnapshot = bodyContent;

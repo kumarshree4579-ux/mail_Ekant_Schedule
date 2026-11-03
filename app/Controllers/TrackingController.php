@@ -441,14 +441,14 @@ final class TrackingController
         Auth::requireAuth();
         header('Content-Type: application/json');
 
-        $tid = $_POST['tid'] ?? '';
+        $tid = trim($_POST['tid'] ?? '');
         if (empty($tid)) {
             echo json_encode(['ok' => false, 'message' => 'Tracking ID missing.']);
             exit;
         }
 
         $db = Database::get();
-        $stmt = $db->prepare("SELECT subject, recipients, body, studio_fields, is_bounced FROM email_sends WHERE tracking_id = ? AND is_draft = 0 LIMIT 1");
+        $stmt = $db->prepare("SELECT id, subject, recipients, recipient_email, body, studio_fields, is_bounced, custom_id FROM email_sends WHERE tracking_id = ? AND is_draft = 0 LIMIT 1");
         $stmt->execute([$tid]);
         $email = $stmt->fetch();
 
@@ -480,22 +480,69 @@ final class TrackingController
             exit;
         }
 
-        $newEmail = $_POST['new_email'] ?? '';
-        $htmlContent = $email['body'];
-
-        // Inject tracking pixel for the FIRST recipient to keep tracking aligned
-        $recips = array_map('trim', explode(',', $email['recipients']));
-        if (!empty($newEmail)) {
-            $recips = array_map('trim', explode(',', $newEmail));
-        }
-        $firstRecip = '';
-        foreach ($recips as $rec) {
-            if (filter_var($rec, FILTER_VALIDATE_EMAIL)) {
-                $firstRecip = $rec;
-                break;
+        $newEmail = trim($_POST['new_email'] ?? '');
+        $targetRecipient = '';
+        if (!empty($newEmail) && filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+            $targetRecipient = $newEmail;
+        } else {
+            $rawRecips = array_map('trim', explode(',', $email['recipient_email'] ?: $email['recipients']));
+            foreach ($rawRecips as $rec) {
+                if (filter_var($rec, FILTER_VALIDATE_EMAIL)) {
+                    $targetRecipient = $rec;
+                    break;
+                }
             }
         }
-        
+
+        if (empty($targetRecipient)) {
+            echo json_encode(['ok' => false, 'message' => 'No valid recipient email address.']);
+            exit;
+        }
+
+        // Always create a FRESH entry in email_sends with its own unique tracking ID
+        $newTrackingId = bin2hex(random_bytes(16));
+        $now = time();
+
+        // Prepare child studio_fields referencing parent email
+        $childFields = $studioFields;
+        $childFields['parent_tracking_id'] = $tid;
+        $childFields['parent_send_id']     = (int)$email['id'];
+        $childFields['is_reminder']        = 1;
+        $childFields['reminder_number']    = count($resendLogs) + 1;
+        unset($childFields['resend_logs']); // Fresh reminder row starts with no reminders of its own
+
+        $htmlContent = $email['body'];
+        // Strip previous tracking pixel
+        $htmlContent = preg_replace('/<img[^>]+src=["\'][^"\']*\/track\?tid=[^"\']*["\'][^>]*>/i', '', $htmlContent);
+        // Replace callback ID if any
+        $htmlContent = str_replace('{{TRACKING_ID}}', $newTrackingId, $htmlContent);
+        $htmlContent = preg_replace('/([?&]tid=)[a-f0-9]{16,64}/i', '$1' . $newTrackingId, $htmlContent);
+
+        // Insert fresh entry into email_sends
+        $ins = $db->prepare("
+            INSERT INTO email_sends (tracking_id, recipients, recipient_email, subject, sent_at, is_draft, body, studio_fields, custom_id)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)
+        ");
+        $ins->execute([
+            $newTrackingId,
+            $targetRecipient,
+            $targetRecipient,
+            $email['subject'],
+            $now,
+            $htmlContent,
+            json_encode($childFields),
+            $email['custom_id'] ?? null
+        ]);
+        $newSendId = (int)$db->lastInsertId();
+
+        // Mint fresh PDF tracking tokens for the new tracking ID and new send ID
+        $finalHtml = StudioController::rewritePdfTokensForRecipient($htmlContent, $newTrackingId, $newSendId);
+        // Inject fresh tracking pixel for the new recipient and new tracking ID
+        $finalHtml = StudioController::injectTrackingPixel($finalHtml, $newTrackingId, $targetRecipient);
+
+        // Update the fresh entry with finalized body
+        $db->prepare("UPDATE email_sends SET body = ? WHERE id = ?")->execute([$finalHtml, $newSendId]);
+
         // Use PHPMailer
         $mail = new PHPMailer(true);
         try {
@@ -510,37 +557,30 @@ final class TrackingController
             $mail->Port       = 465;
             $mail->setFrom(APP_EMAIL, 'Roger');
 
-            foreach ($recips as $rec) {
-                if (filter_var($rec, FILTER_VALIDATE_EMAIL)) {
-                    $mail->addAddress($rec);
-                }
-            }
-
+            $mail->addAddress($targetRecipient);
             $mail->isHTML(true);
             $mail->Subject = $email['subject'];
             
             // Inline CIDs for images if needed
             $cidIndex = 0;
-            if (!empty($htmlContent)) {
-                $htmlContent = preg_replace_callback('/<img([^>]+)>/i', function ($m) use ($mail, &$cidIndex) {
-                    $tag = $m[1];
-                    if (!preg_match('/src=["\']([^"\']*)["\']/', $tag, $srcMatch)) return $m[0];
-                    $src = $srcMatch[1];
-                    if (str_contains($src, '/track?tid=')) return $m[0];
-                    if (str_starts_with($src, 'data:')) return $m[0];
-                    if (!filter_var($src, FILTER_VALIDATE_URL)) {
-                        $local = dirname(__DIR__, 2) . '/' . ltrim($src, '/');
-                        if (file_exists($local)) {
-                            $cid = 'img_cid_' . ($cidIndex++) . '_' . time();
-                            $mail->addEmbeddedImage($local, $cid);
-                            return '<img' . preg_replace('/src=["\'][^"\']*["\']/', 'src="cid:' . $cid . '"', $tag) . '>';
-                        }
+            $mailBody = preg_replace_callback('/<img([^>]+)>/i', function ($m) use ($mail, &$cidIndex) {
+                $tag = $m[1];
+                if (!preg_match('/src=["\']([^"\']*)["\']/', $tag, $srcMatch)) return $m[0];
+                $src = $srcMatch[1];
+                if (str_contains($src, '/track?tid=')) return $m[0];
+                if (str_starts_with($src, 'data:')) return $m[0];
+                if (!filter_var($src, FILTER_VALIDATE_URL)) {
+                    $local = dirname(__DIR__, 2) . '/' . ltrim($src, '/');
+                    if (file_exists($local)) {
+                        $cid = 'img_cid_' . ($cidIndex++) . '_' . time();
+                        $mail->addEmbeddedImage($local, $cid);
+                        return '<img' . preg_replace('/src=["\'][^"\']*["\']/', 'src="cid:' . $cid . '"', $tag) . '>';
                     }
-                    return $m[0];
-                }, $htmlContent);
-            }
+                }
+                return $m[0];
+            }, $finalHtml);
 
-            $mail->Body = $htmlContent;
+            $mail->Body = $mailBody;
             $mail->send();
             
             // Append clean copy via IMAP
@@ -554,23 +594,28 @@ final class TrackingController
                 }
             }
 
-            // Log it
+            // Append to parent email's audit logs ONLY (without modifying its existing data or recipient)
             $user = Auth::currentUser();
             $username = $user['name'] ?? 'Unknown User';
-            
-            if (!empty($newEmail) && $newEmail !== $email['recipients']) {
-                $resendLogs[] = "{$username} sent reminder to " . htmlspecialchars($newEmail) . " on " . date('M j, Y g:i A');
-                $db->prepare("UPDATE email_sends SET recipients = ? WHERE tracking_id = ?")->execute([$newEmail, $tid]);
-            } else {
-                $resendLogs[] = "{$username} sent reminder on " . date('M j, Y g:i A');
-            }
+            $remNum = count($resendLogs) + 1;
+            $resendLogs[] = "{$username} sent reminder #{$remNum} to " . htmlspecialchars($targetRecipient) . " on " . date('M j, Y g:i A') . " (New ID: {$newTrackingId})";
             $studioFields['resend_logs'] = $resendLogs;
             
-            $updStmt = $db->prepare("UPDATE email_sends SET studio_fields = ? WHERE tracking_id = ?");
-            $updStmt->execute([json_encode($studioFields), $tid]);
+            $updStmt = $db->prepare("UPDATE email_sends SET studio_fields = ? WHERE id = ?");
+            $updStmt->execute([json_encode($studioFields), $email['id']]);
 
-            echo json_encode(['ok' => true, 'message' => 'Reminder email sent successfully!']);
+            echo json_encode([
+                'ok' => true,
+                'message' => "Reminder sent successfully as a fresh tracking entry to {$targetRecipient}!",
+                'new_tracking_id' => $newTrackingId,
+                'orig_tracking_id' => $tid
+            ]);
         } catch (\Exception $e) {
+            // Clean up the freshly created entry if mail sending failed
+            try {
+                $db->prepare("DELETE FROM email_sends WHERE id = ?")->execute([$newSendId]);
+                $db->prepare("DELETE FROM pdf_link_tokens WHERE send_id = ?")->execute([$newSendId]);
+            } catch (\Throwable) {}
             echo json_encode(['ok' => false, 'message' => 'Mailer Error: ' . $mail->ErrorInfo]);
         }
     }

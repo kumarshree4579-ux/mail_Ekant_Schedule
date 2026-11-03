@@ -245,7 +245,7 @@ final class StudioController
         }
     }
 
-    private static function injectTrackingPixel(string $emailBody, string $trackingId, string $recipientEmail): string
+    public static function injectTrackingPixel(string $emailBody, string $trackingId, string $recipientEmail): string
     {
         // Must be absolute URL — email clients have no concept of relative paths
         $pixelUrl = APP_URL . '/track?tid=' . urlencode($trackingId) . '&to=' . urlencode($recipientEmail);
@@ -262,7 +262,7 @@ final class StudioController
      * Mint a fresh pdf_link_tokens row and return the token.
      * Called once per recipient so every viewer link is unique.
      */
-    private static function mintPdfToken(string $url, string $name, string $trackingId, int $sendId): string
+    public static function mintPdfToken(string $url, string $name, string $trackingId, int $sendId): string
     {
         $token = bin2hex(random_bytes(24));
         Database::get()->prepare(
@@ -273,34 +273,90 @@ final class StudioController
     }
 
     /**
-     * For every <a data-pdf-url="..."> button in the body, replace the href
-     * with a freshly-minted per-recipient token URL pointing to Viewer/index.php,
-     * and remove the data attribute.
+     * For every PDF / document button in the body (both with data-pdf-url and existing Viewer links),
+     * replace the href with a freshly-minted per-recipient token URL pointing to Viewer/index.php.
      */
-    private static function rewritePdfTokensForRecipient(
+    public static function rewritePdfTokensForRecipient(
         string $html,
         string $trackingId,
         int    $sendId
     ): string {
         return preg_replace_callback(
-            '/<a([^>]+data-pdf-url=["\']([^"\']+)["\'][^>]*)>/i',
+            '/<a\s+([^>]*?(?:data-pdf-url|Viewer\/index\.php|pdf-viewer|Viewer\/)[^>]*?)>/i',
             function (array $m) use ($trackingId, $sendId): string {
                 $attrs   = $m[1];
-                $pdfUrl  = html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                // Extract display name from data-pdf-name if present
-                $name = '';
+                $pdfUrl  = '';
+                $name    = '';
+
+                // 1. Try data-pdf-url attribute
+                if (preg_match('/data-pdf-url=["\']([^"\']+)["\']/', $attrs, $nm)) {
+                    $pdfUrl = html_entity_decode($nm[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                }
+
+                // 2. Try data-pdf-name attribute
                 if (preg_match('/data-pdf-name=["\']([^"\']*)["\']/', $attrs, $nm)) {
                     $name = html_entity_decode($nm[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 }
-                $token = self::mintPdfToken($pdfUrl, $name, $trackingId, $sendId);
+
+                // 3. Extract href
+                $href = '';
+                if (preg_match('/href=["\']([^"\']+)["\']/', $attrs, $nm)) {
+                    $href = html_entity_decode($nm[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                }
+
+                // 4. If pdfUrl is not yet found, check href query parameter `url=`
+                if ($pdfUrl === '' && $href !== '') {
+                    $parsed = parse_url($href);
+                    if (!empty($parsed['query'])) {
+                        parse_str($parsed['query'], $qp);
+                        if (!empty($qp['url'])) {
+                            $pdfUrl = (string)$qp['url'];
+                        }
+                        if ($name === '' && !empty($qp['name'])) {
+                            $name = (string)$qp['name'];
+                        }
+                    }
+                }
+
+                // 5. If pdfUrl is still not found, check if a previous token is in href
+                if ($href !== '') {
+                    if (preg_match('/[?&]token=([^&"\'\s]+)/i', $href, $tm)) {
+                        $oldToken = urldecode($tm[1]);
+                        try {
+                            $db = Database::get();
+                            $stmt = $db->prepare('SELECT url, name FROM pdf_link_tokens WHERE token = ? LIMIT 1');
+                            $stmt->execute([$oldToken]);
+                            if ($row = $stmt->fetch()) {
+                                if ($pdfUrl === '') $pdfUrl = $row['url'] ?? '';
+                                if ($name === '') $name = $row['name'] ?? '';
+                            } else {
+                                $stmt2 = $db->prepare('SELECT url, filename FROM attachment_links WHERE token = ? LIMIT 1');
+                                $stmt2->execute([$oldToken]);
+                                if ($row2 = $stmt2->fetch()) {
+                                    if ($pdfUrl === '') $pdfUrl = $row2['url'] ?? '';
+                                    if ($name === '') $name = $row2['filename'] ?? '';
+                                }
+                            }
+                        } catch (\Throwable) {}
+                    }
+                }
+
+                // If no PDF url found, leave anchor unchanged
+                if ($pdfUrl === '') {
+                    return $m[0];
+                }
+
+                $token = self::mintPdfToken($pdfUrl, $name ?: 'Document', $trackingId, $sendId);
+
                 // Point directly to Viewer/index.php with the PDF URL + tracking token
                 $viewerBase = defined('VIEWER_URL') ? rtrim((string)VIEWER_URL, '/') . '/' : APP_URL . '/Viewer/';
                 $viewerHref = $viewerBase . 'index.php?url=' . urlencode($pdfUrl) . '&token=' . urlencode($token);
+
                 // Replace href and strip data-pdf-url / data-pdf-name attributes
-                $attrs = preg_replace('/\s*href=["\'"][^"\']*["\']/', '', $attrs);
-                $attrs = preg_replace('/\s*data-pdf-url=["\'"][^"\']*["\']/', '', $attrs);
-                $attrs = preg_replace('/\s*data-pdf-name=["\'"][^"\']*["\']/', '', $attrs);
-                return '<a href="' . htmlspecialchars($viewerHref, ENT_QUOTES) . '"' . $attrs . '>';
+                $cleanAttrs = preg_replace('/\s*href=["\'"][^"\']*["\']/', '', $attrs);
+                $cleanAttrs = preg_replace('/\s*data-pdf-url=["\'"][^"\']*["\']/', '', $cleanAttrs);
+                $cleanAttrs = preg_replace('/\s*data-pdf-name=["\'"][^"\']*["\']/', '', $cleanAttrs);
+                return '<a href="' . htmlspecialchars($viewerHref, ENT_QUOTES) . '"' . $cleanAttrs . '>';
             },
             $html
         ) ?? $html;
@@ -324,8 +380,9 @@ final class StudioController
 
         foreach (array_keys($tokens) as $token) {
             try {
+                // Only associate if tracking_id is empty or unassigned (do not overwrite prior sends)
                 Database::get()->prepare(
-                    'UPDATE pdf_link_tokens SET tracking_id = ?, send_id = ? WHERE token = ?'
+                    'UPDATE pdf_link_tokens SET tracking_id = ?, send_id = ? WHERE token = ? AND (tracking_id IS NULL OR tracking_id = "")'
                 )->execute([$trackingId, $sendId, $token]);
             } catch (\Throwable) {}
         }
@@ -458,7 +515,7 @@ final class StudioController
                         $dest = self::safePath($templateDir, $safeName);
                         if ($dest) {
                             if (!preg_match('/<!--\s*EMAIL_SUBJECT:\s*.*?\s*-->/is', $content)) {
-                                $content = '<!-- EMAIL_SUBJECT: Dish Network Exclusive Discount Offer for {{Hotel_Name}} {{City}}, {{State}} {{Zip}} -->' . ltrim($content);
+                                $content = '<!-- EMAIL_SUBJECT:  -->' . ltrim($content);
                             }
                             file_put_contents($dest, $content);
                             $statusMessage = "✅ Template '{$safeName}' uploaded successfully!";
@@ -1032,6 +1089,12 @@ final class StudioController
                             : $finalBody;
                         // Replace {{TRACKING_ID}} placeholder in callback links
                         $recipientBody = str_replace('{{TRACKING_ID}}', $recipientTrackingId, $recipientBody);
+                        
+                        // Update the send record with the exact recipient body
+                        if ($sendId) {
+                            Database::get()->prepare("UPDATE email_sends SET body = ? WHERE id = ?")->execute([$recipientBody, $sendId]);
+                        }
+
                         $mail->clearAddresses();
                         $mail->addAddress($recipient);
                         
@@ -1041,16 +1104,27 @@ final class StudioController
                         
                         // Set the clean body (without tracking pixels, and with direct PDF URLs) BEFORE cloning
                         $mail->Body = preg_replace_callback(
-                            '/<a([^>]+data-pdf-url=["\']([^"\']+)["\'][^>]*)>/i',
+                            '/<a\s+([^>]*?(?:data-pdf-url|Viewer\/index\.php|pdf-viewer|Viewer\/)[^>]*?)>/i',
                             function (array $m): string {
                                 $attrs  = $m[1];
-                                $pdfUrl = html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                $pdfUrl = '';
+                                if (preg_match('/data-pdf-url=["\']([^"\']+)["\']/', $attrs, $match)) {
+                                    $pdfUrl = html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                } elseif (preg_match('/href=["\']([^"\']+)["\']/', $attrs, $match)) {
+                                    $href = html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                    $parsed = parse_url($href);
+                                    if (!empty($parsed['query'])) {
+                                        parse_str($parsed['query'], $qp);
+                                        if (!empty($qp['url'])) $pdfUrl = (string)$qp['url'];
+                                    }
+                                }
+                                if ($pdfUrl === '') return $m[0];
                                 $attrs = preg_replace('/\s*href=["\'"][^"\']*["\']/', '', $attrs);
                                 $attrs = preg_replace('/\s*data-pdf-url=["\'"][^"\']*["\']/', '', $attrs);
                                 $attrs = preg_replace('/\s*data-pdf-name=["\'"][^"\']*["\']/', '', $attrs);
                                 return '<a href="' . htmlspecialchars($pdfUrl, ENT_QUOTES) . '"' . $attrs . '>';
                             },
-                            $finalBody
+                            $recipientBody
                         );
                         
                         // ── STRATEGY: Send tracked via Gmail API (returns message ID),

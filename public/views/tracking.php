@@ -1452,9 +1452,15 @@ document.addEventListener('keydown', (e) => {
                 
                 const data = await response.json();
                 if (data.ok) {
-                    Swal.fire('Sent!', data.message, 'success');
-                    // Refresh modal to show new log
-                    openEmailDetailModal(tid);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Reminder Sent!',
+                        text: data.message,
+                        confirmButtonColor: '#4f46e5',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        window.location.reload();
+                    });
                 } else {
                     Swal.fire('Failed', data.message || 'Error resending email.', 'error');
                 }
